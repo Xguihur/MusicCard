@@ -1,0 +1,6 @@
+{
+  "/page": "app/page.js",
+  "/poster/page": "app/poster/page.js",
+  "/api/music/route": "app/api/music/route.js",
+  "/api/proxy/image/route": "app/api/proxy/image/route.js"
+}
