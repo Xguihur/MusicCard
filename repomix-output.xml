@@ -1,0 +1,4451 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+app/
+  api/
+    music/
+      route.ts
+    proxy/
+      image/
+        route.ts
+    resolve-url/
+      route.ts
+  phone/
+    page.tsx
+    PhoneContent.tsx
+  poster/
+    page.tsx
+    SpotifyContent.tsx
+  fonts.ts
+  globals.css
+  layout.tsx
+  page.tsx
+lib/
+  themes.ts
+types/
+  index.ts
+  music.ts
+  poster.ts
+  spotify.ts
+  theme.ts
+utils/
+  color.ts
+  musicParser.ts
+  phone.ts
+  poster.ts
+  posterGenerator.ts
+  retry.ts
+  spotify.ts
+.gitignore
+CONTRIBUTING.md
+eslint.config.mjs
+LICENSE
+next-env.d.ts
+next.config.js
+package.json
+postcss.config.js
+README.md
+tailwind.config.ts
+tsconfig.json
+types.ts
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="app/api/music/route.ts">
+import { retry } from "@/utils/retry";
+import { NextResponse } from "next/server";
+import { MusicPlatform } from "@/types/music";
+import axios from "axios";
+
+// 定义歌手类型
+interface Artist {
+  name: string;
+}
+
+// 网易云音乐API请求头
+const NETEASE_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  Referer: "http://music.163.com",
+  Host: "music.163.com",
+};
+
+export async function GET(request: Request) {
+  try {
+    // 从URL中获取参数
+    const { searchParams } = new URL(request.url);
+    const platform = searchParams.get("platform");
+    const musicId = searchParams.get("id");
+
+    console.log("收到请求:", { platform, musicId });
+
+    if (!platform || !musicId) {
+      console.error("缺少必要参数:", { platform, musicId });
+      return NextResponse.json({ error: "缺少必要参数" }, { status: 400 });
+    }
+
+    // 根据平台获取音乐信息
+    switch (platform) {
+      case MusicPlatform.NETEASE: {
+        console.log("开始获取网易云音乐信息:", musicId);
+
+        try {
+          // 使用重试机制获取歌曲详情
+          const songDetail = await retry(
+            async () => {
+              const response = await axios.get(
+                `http://music.163.com/api/song/detail/?id=${musicId}&ids=[${musicId}]`,
+                { headers: NETEASE_HEADERS }
+              );
+              if (!response.data?.songs?.[0]) {
+                throw new Error("未找到歌曲信息");
+              }
+              return response.data;
+            },
+            {
+              maxAttempts: 3,
+              initialDelay: 1000,
+              maxDelay: 5000,
+            }
+          );
+
+          console.log("歌曲详情响应:", songDetail);
+          const song = songDetail.songs[0];
+
+          // 使用重试机制获取歌词
+          const lyricsData = await retry(
+            async () => {
+              const response = await axios.get(
+                `http://music.163.com/api/song/lyric?id=${musicId}&lv=1&kv=1&tv=-1`,
+                { headers: NETEASE_HEADERS }
+              );
+              return response.data;
+            },
+            {
+              maxAttempts: 3,
+              initialDelay: 1000,
+              maxDelay: 5000,
+            }
+          );
+
+          console.log("歌词响应:", lyricsData);
+
+          // 解析歌词
+          const lyrics = lyricsData.lrc?.lyric || "";
+          const lyricsArray = lyrics
+            .split("\n")
+            .map((line: string) =>
+              line.replace(/\[\d{2}:\d{2}\.\d{2,3}\]/g, "").trim()
+            )
+            .filter((line: string) => line);
+
+          const result = {
+            title: song.name,
+            artist: song.artists.map((a: Artist) => a.name).join(", "),
+            coverUrl: song.album.picUrl,
+            lyrics: lyricsArray.join("\n"),
+            duration: Math.floor(song.duration / 1000),
+          };
+
+          console.log("处理完成，返回结果:", result);
+          return NextResponse.json(result);
+        } catch (error) {
+          console.error("网易云音乐API调用失败:", error);
+          if (axios.isAxiosError(error)) {
+            console.error("API错误详情:", {
+              status: error.response?.status,
+              data: error.response?.data,
+              headers: error.response?.headers,
+            });
+          }
+          throw error;
+        }
+      }
+
+      default:
+        console.error("不支持的音乐平台:", platform);
+        return NextResponse.json(
+          { error: "不支持的音乐平台" },
+          { status: 400 }
+        );
+    }
+  } catch (error) {
+    console.error("获取音乐信息失败:", error);
+    if (axios.isAxiosError(error)) {
+      console.error("错误详情:", {
+        status: error.response?.status,
+        data: error.response?.data,
+        headers: error.response?.headers,
+      });
+    }
+    return NextResponse.json(
+      {
+        error: "获取音乐信息失败",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 }
+    );
+  }
+}
+</file>
+
+<file path="app/api/proxy/image/route.ts">
+// app/api/proxy/image/route.ts
+// 图片代理 API 路由,用于获取跨域图片
+
+import { NextResponse } from "next/server";
+
+// 处理 GET 请求
+export async function GET(request: Request) {
+  try {
+    // 从 URL 参数中获取目标图片 URL
+    const url = new URL(request.url);
+    const imageUrl = url.searchParams.get("url");
+
+    if (!imageUrl) {
+      return new NextResponse("Missing image URL", { status: 400 });
+    }
+
+    // 获取图片
+    const response = await fetch(imageUrl);
+
+    if (!response.ok) {
+      return new NextResponse("Failed to fetch image", {
+        status: response.status,
+      });
+    }
+
+    // 获取图片数据
+    const imageBuffer = await response.arrayBuffer();
+    const contentType = response.headers.get("content-type") || "image/jpeg";
+
+    // 返回图片,设置正确的 content-type 和 CORS 头
+    return new NextResponse(imageBuffer, {
+      headers: {
+        "Content-Type": contentType,
+        "Cache-Control": "public, max-age=31536000",
+        "Access-Control-Allow-Origin": "*",
+      },
+    });
+  } catch (error) {
+    console.error("Error proxying image:", error);
+    return new NextResponse("Error proxying image", { status: 500 });
+  }
+}
+
+// 处理预检请求
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Max-Age": "86400",
+    },
+  });
+}
+</file>
+
+<file path="app/api/resolve-url/route.ts">
+import { retry } from "@/utils/retry";
+
+// 从文本中提取URL的函数
+function extractUrl(text: string): string | null {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const matches = text.match(urlRegex);
+  return matches ? matches[0] : null;
+}
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    let url = searchParams.get("url");
+
+    if (!url) {
+      return new Response("URL参数不能为空", { status: 400 });
+    }
+
+    // 从文本中提取URL
+    const extractedUrl = extractUrl(url);
+    if (!extractedUrl) {
+      return new Response("无法从文本中提取URL", { status: 400 });
+    }
+    url = extractedUrl;
+
+    // 使用重试函数发起请求
+    const response = await retry(
+      async () => {
+        const res = await fetch(url!, {
+          redirect: "follow",
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          },
+        });
+
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
+        return res;
+      },
+      {
+        maxAttempts: 3,
+        initialDelay: 1000,
+        maxDelay: 5000,
+      }
+    );
+
+    // 获取最终URL
+    const finalUrl = response.url;
+
+    return new Response(JSON.stringify({ url: finalUrl }), {
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error("解析URL失败:", error);
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : "解析URL失败",
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+}
+</file>
+
+<file path="app/phone/page.tsx">
+import { Metadata } from "next";
+import { Suspense } from "react";
+import PhoneContent from "./PhoneContent";
+
+// 页面元数据
+export const metadata: Metadata = {
+  title: "Phone模板 - Card.catpng.net",
+  description: "使用Phone模板生成你的音乐小卡",
+};
+
+// 手机模板页面组件
+export default function PhonePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PhoneContent />
+    </Suspense>
+  );
+}
+</file>
+
+<file path="app/phone/PhoneContent.tsx">
+"use client";
+
+import { useRef, useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { MusicInfo } from "@/types/music";
+import { Theme } from "@/types/theme";
+import { generatePhonePoster } from "@/utils/phone";
+import { parseMusicUrl, processLyrics } from "@/utils/musicParser";
+import Link from "next/link";
+
+// 海报元素配置接口
+interface PosterElement {
+  x: number;
+  y: number;
+  scale: number;
+  visible: boolean;
+}
+
+interface PosterConfig {
+  cover: PosterElement;
+  title: PosterElement;
+  artist: PosterElement;
+  lyrics: PosterElement;
+  duration: PosterElement;
+}
+
+// 背景设置接口
+interface BackgroundConfig {
+  imageUrl?: string; // 自定义背景图片URL
+  blur?: number; // 模糊程度 (0-20)
+  opacity?: number; // 不透明度 (0-1)
+  gradient?: {
+    angle: number; // 渐变角度 (0-360)
+    colors: string[]; // 渐变颜色数组
+    stops: number[]; // 渐变位置数组 (0-1)
+  };
+}
+
+// 默认主题
+const phoneTheme: Theme = {
+  id: "phone",
+  name: "手机风格",
+  background: "/templates/phone.png",
+  backgroundType: "image",
+  text: "#ffffff",
+  secondary: "#cccccc",
+};
+
+// 海报元素配置
+const posterConfig: PosterConfig = {
+  cover: { x: 0.1, y: 0.04, scale: 1, visible: true },
+  title: { x: 0.1, y: 0.693, scale: 1, visible: true },
+  artist: { x: 0.1, y: 0.693, scale: 1, visible: true },
+  lyrics: { x: 0.1, y: 0.64, scale: 1, visible: true },
+  duration: { x: 0.9, y: 0.743, scale: 1, visible: true },
+};
+
+// 加载状态组件
+function LoadingOverlay({ message }: { message: string }) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+      <div className="bg-white rounded-lg p-8 max-w-sm w-full mx-4 text-center">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+        <p className="text-gray-700">{message}</p>
+      </div>
+    </div>
+  );
+}
+
+// 导航栏组件
+function NavigationBar({ currentUrl }: { currentUrl: string | null }) {
+  return (
+    <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center space-x-4">
+        <Link
+          href="/"
+          className="flex items-center text-gray-600 hover:text-gray-900"
+        >
+          <span className="material-symbols-outlined mr-1">home</span>
+          返回首页
+        </Link>
+      </div>
+      <div className="flex items-center space-x-4">
+        <span className="text-gray-500">切换模板：</span>
+        <Link
+          href={`/poster${
+            currentUrl ? `?url=${encodeURIComponent(currentUrl)}` : ""
+          }`}
+          className="px-4 py-2 bg-white rounded-md shadow hover:shadow-md transition-shadow text-gray-600 hover:text-gray-900"
+        >
+          Poster
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+export default function PhoneContent() {
+  const searchParams = useSearchParams();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [musicInfo, setMusicInfo] = useState<MusicInfo>({
+    title: "",
+    artist: "",
+    coverUrl: "",
+    lyrics: "",
+    duration: 0,
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [useGradient, setUseGradient] = useState(false);
+  const [backgroundConfig, setBackgroundConfig] = useState<BackgroundConfig>({
+    blur: 0,
+    opacity: 1,
+    gradient: {
+      angle: 180,
+      colors: ["rgba(0,0,0,0.7)", "rgba(0,0,0,0.3)"],
+      stops: [0, 1],
+    },
+  });
+
+  // 处理文本编辑
+  const handleTextEdit = (field: keyof MusicInfo, value: string | number) => {
+    setMusicInfo((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  // 处理封面上传
+  const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setMusicInfo((prev) => ({
+          ...prev,
+          coverUrl: event.target?.result as string,
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // 处理海报保存
+  const handleSavePoster = async () => {
+    if (!canvasRef.current) return;
+    setIsSaving(true);
+    try {
+      const canvas = canvasRef.current;
+      canvas.toBlob((blob) => {
+        if (!blob) throw new Error("Failed to create blob");
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${musicInfo.title}-${musicInfo.artist}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+    } catch (error) {
+      console.error("保存海报失败:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // 处理时长编辑
+  const handleDurationEdit = (value: string) => {
+    // 解析mm:ss格式的时长
+    const [minutes, seconds] = value.split(":").map(Number);
+    if (!isNaN(minutes) && !isNaN(seconds)) {
+      const totalSeconds = minutes * 60 + seconds;
+      handleTextEdit("duration", totalSeconds);
+    }
+  };
+
+  // 格式化时长为mm:ss
+  const formatDuration = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+  };
+
+  // 处理背景上传
+  const handleBackgroundUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setBackgroundConfig((prev) => ({
+          ...prev,
+          imageUrl: event.target?.result as string,
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // 处理背景设置更新
+  const handleBackgroundConfigUpdate = (
+    field: keyof BackgroundConfig,
+    value: number
+  ) => {
+    setBackgroundConfig((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  // 加载音乐信息
+  useEffect(() => {
+    const loadMusicInfo = async () => {
+      // 处理URL参数传递的音乐信息
+      const params = searchParams;
+      if (params && params.get("title")) {
+        setIsLoading(true);
+        try {
+          const rawLyrics = params.get("lyrics") || "";
+          console.log("URL参数传递的原始歌词:", rawLyrics);
+          const processedLyrics = processLyrics(rawLyrics, 1); // 只获取1行歌词
+          console.log("URL参数歌词处理后:", processedLyrics);
+          const info: MusicInfo = {
+            title: params.get("title") || "",
+            artist: params.get("artist") || "",
+            coverUrl: params.get("cover") || "",
+            lyrics: processedLyrics,
+            duration: Number(params.get("duration")) || 0,
+          };
+          console.log("设置的音乐信息:", info);
+          setMusicInfo(info);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "加载音乐信息失败");
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      // 处理音乐链接获取信息
+      const url = searchParams.get("url");
+      if (!url) return;
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // 先解析URL获取平台和ID
+        const { platform, id } = await parseMusicUrl(url);
+        const params = new URLSearchParams({
+          platform,
+          id,
+        });
+
+        const response = await fetch(`/api/music?${params.toString()}`);
+        if (!response.ok) {
+          throw new Error("获取音乐信息失败");
+        }
+        const data = await response.json();
+        console.log("API返回的原始数据:", data);
+        data.lyrics = processLyrics(data.lyrics, 1); // 只获取1行歌词
+        console.log("API数据歌词处理后:", data);
+        setMusicInfo(data);
+      } catch (error) {
+        console.error("获取音乐信息失败:", error);
+        setError(
+          error instanceof Error
+            ? error.message
+            : "获取音乐信息失败，请检查链接是否正确"
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadMusicInfo();
+  }, [searchParams]);
+
+  // 绘制海报
+  useEffect(() => {
+    if (canvasRef.current && musicInfo && phoneTheme) {
+      generatePhonePoster(
+        canvasRef.current,
+        musicInfo,
+        phoneTheme,
+        {
+          cover: {
+            size: 800,
+            visible: true,
+            x: posterConfig.cover.x,
+            y: posterConfig.cover.y,
+          },
+          title: {
+            size: 48,
+            visible: true,
+            x: posterConfig.title.x,
+            y: posterConfig.title.y,
+          },
+          artist: {
+            size: 48,
+            visible: true,
+            x: posterConfig.artist.x,
+            y: posterConfig.artist.y,
+          },
+          lyrics: {
+            size: 50,
+            visible: true,
+            x: posterConfig.lyrics.x,
+            y: posterConfig.lyrics.y,
+          },
+          duration: {
+            size: 28,
+            visible: true,
+            x: posterConfig.duration.x,
+            y: posterConfig.duration.y,
+          },
+        },
+        useGradient,
+        backgroundConfig
+      );
+    }
+  }, [musicInfo, useGradient, backgroundConfig]);
+
+  return (
+    <main className="min-h-screen bg-gray-100 py-12 px-4">
+      {/* 加载状态 */}
+      {isLoading && <LoadingOverlay message="正在获取音乐信息..." />}
+      {isSaving && <LoadingOverlay message="正在生成海报..." />}
+
+      {error ? (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-red-500">{error}</div>
+        </div>
+      ) : (
+        <div className="max-w-6xl mx-auto">
+          {/* 添加导航栏 */}
+          <NavigationBar currentUrl={searchParams.get("url")} />
+
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-center text-gray-900">
+              Card.Catpng.net
+            </h1>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* 左侧预览 */}
+            <div className="lg:col-span-2 bg-white rounded-lg shadow-lg p-6">
+              <div className="relative">
+                <canvas
+                  ref={canvasRef}
+                  width={1000}
+                  height={1500}
+                  className="w-full h-auto"
+                />
+              </div>
+            </div>
+
+            {/* 右侧控制面板 */}
+            <div className="space-y-6 bg-white rounded-lg shadow-lg p-6">
+              {/* 基本信息编辑 */}
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold">基本信息</h2>
+
+                {/* 标题编辑 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    歌曲标题
+                  </label>
+                  <input
+                    type="text"
+                    value={musicInfo.title}
+                    onChange={(e) => handleTextEdit("title", e.target.value)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  />
+                </div>
+
+                {/* 艺术家编辑 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    艺术家
+                  </label>
+                  <input
+                    type="text"
+                    value={musicInfo.artist}
+                    onChange={(e) => handleTextEdit("artist", e.target.value)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  />
+                </div>
+
+                {/* 歌词编辑 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    歌词
+                  </label>
+                  <textarea
+                    value={musicInfo.lyrics}
+                    onChange={(e) => handleTextEdit("lyrics", e.target.value)}
+                    rows={3}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  />
+                </div>
+
+                {/* 实际时长编辑 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    实际时长 (mm:ss)
+                  </label>
+                  <input
+                    type="text"
+                    value={formatDuration(musicInfo.duration)}
+                    onChange={(e) => handleDurationEdit(e.target.value)}
+                    placeholder="0:00"
+                    pattern="[0-9]+:[0-5][0-9]"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  />
+                </div>
+
+                {/* 播放时长编辑 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    播放时长 (mm:ss)
+                  </label>
+                  <input
+                    type="text"
+                    value={formatDuration(
+                      musicInfo.playDuration ||
+                        Math.floor(musicInfo.duration / 3)
+                    )}
+                    onChange={(e) => {
+                      const [minutes, seconds] = e.target.value
+                        .split(":")
+                        .map(Number);
+                      if (!isNaN(minutes) && !isNaN(seconds)) {
+                        handleTextEdit("playDuration", minutes * 60 + seconds);
+                      }
+                    }}
+                    placeholder="0:00"
+                    pattern="[0-9]+:[0-5][0-9]"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  />
+                </div>
+
+                {/* 封面上传 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    封面图片
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleCoverUpload}
+                    className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                  />
+                </div>
+              </div>
+
+              {/* 背景设置 */}
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold">背景设置</h2>
+
+                {/* 背景图片上传 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    背景图片
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleBackgroundUpload}
+                    className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                  />
+                </div>
+
+                {/* 模糊程度设置 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    模糊程度
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="20"
+                    step="1"
+                    value={backgroundConfig.blur}
+                    onChange={(e) =>
+                      handleBackgroundConfigUpdate(
+                        "blur",
+                        Number(e.target.value)
+                      )
+                    }
+                    className="mt-1 block w-full"
+                  />
+                  <div className="mt-1 text-sm text-gray-500 text-right">
+                    {backgroundConfig.blur}px
+                  </div>
+                </div>
+
+                {/* 不透明度设置 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    不透明度
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.1"
+                    value={backgroundConfig.opacity}
+                    onChange={(e) =>
+                      handleBackgroundConfigUpdate(
+                        "opacity",
+                        Number(e.target.value)
+                      )
+                    }
+                    className="mt-1 block w-full"
+                  />
+                  <div className="mt-1 text-sm text-gray-500 text-right">
+                    {Math.round((backgroundConfig.opacity ?? 1) * 100)}%
+                  </div>
+                </div>
+
+                {/* 渐变背景开关 */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700">
+                    渐变背景
+                  </span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={useGradient}
+                      onChange={(e) => setUseGradient(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                  </label>
+                </div>
+              </div>
+
+              {/* 保存按钮 */}
+              <button
+                onClick={handleSavePoster}
+                disabled={isSaving}
+                className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400"
+              >
+                {isSaving ? "保存中..." : "保存海报"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="mt-8 text-center text-sm text-gray-500">
+        如果使用过程有错误，或者你对网站有其他建议，可以发送具体内容到我的邮箱：
+        <a
+          href="mailto:aidaoxx@gmail.com"
+          className="text-indigo-600 hover:text-indigo-800"
+        >
+          aidaoxx@gmail.com
+        </a>
+        ，谢谢
+      </div>
+    </main>
+  );
+}
+</file>
+
+<file path="app/poster/page.tsx">
+import { Suspense } from "react";
+import SpotifyContent from "./SpotifyContent";
+
+// 页面元数据
+export const metadata = {
+  title: "Poster模板 - Card.catpng.net",
+  description: "使用Poster模板生成你的音乐海报",
+};
+
+export default function PosterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-xl">加载中...</div>
+        </div>
+      }
+    >
+      <SpotifyContent />
+    </Suspense>
+  );
+}
+</file>
+
+<file path="app/poster/SpotifyContent.tsx">
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { themes } from "@/lib/themes";
+import { generatePosterImage } from "@/utils/poster";
+import { MusicInfo } from "@/types/music";
+import { parseMusicUrl, processLyrics } from "@/utils/musicParser";
+import Link from "next/link";
+
+// 海报元素位置接口
+interface PosterElement {
+  x: number;
+  y: number;
+  scale: number;
+  visible: boolean;
+}
+
+// 海报配置接口
+interface PosterConfig {
+  cover: PosterElement;
+  title: PosterElement;
+  artist: PosterElement;
+  lyrics: PosterElement;
+  duration: PosterElement;
+}
+
+// 加载状态组件
+function LoadingOverlay({ message }: { message: string }) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+      <div className="bg-white rounded-lg p-8 max-w-sm w-full mx-4 text-center">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+        <p className="text-gray-700">{message}</p>
+      </div>
+    </div>
+  );
+}
+
+// 导航栏组件
+function NavigationBar({ currentUrl }: { currentUrl: string | null }) {
+  return (
+    <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center space-x-4">
+        <Link
+          href="/"
+          className="flex items-center text-gray-600 hover:text-gray-900"
+        >
+          <span className="material-symbols-outlined mr-1">home</span>
+          返回首页
+        </Link>
+      </div>
+      <div className="flex items-center space-x-4">
+        <span className="text-gray-500">切换模板：</span>
+        <Link
+          href={`/phone${
+            currentUrl ? `?url=${encodeURIComponent(currentUrl)}` : ""
+          }`}
+          className="px-4 py-2 bg-white rounded-md shadow hover:shadow-md transition-shadow text-gray-600 hover:text-gray-900"
+        >
+          Phone
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+export default function PosterContent() {
+  const searchParams = useSearchParams();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [selectedTheme, setSelectedTheme] = useState(themes[0]);
+  const [musicInfo, setMusicInfo] = useState<MusicInfo>({
+    title: "",
+    artist: "",
+    coverUrl: "",
+    lyrics: "",
+    duration: 0,
+  });
+  const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // 海报元素配置
+  const [posterConfig, setPosterConfig] = useState<PosterConfig>({
+    cover: { x: 0.053, y: 0.034, scale: 1, visible: true },
+    title: { x: 0.053, y: 0.73, scale: 1, visible: true },
+    artist: { x: 0.053, y: 0.749, scale: 1, visible: true },
+    lyrics: { x: 0.053, y: 0.801, scale: 1, visible: true },
+    duration: { x: 0.947, y: 0.73, scale: 1, visible: true },
+  });
+
+  // 处理文本编辑
+  const handleTextEdit = (field: keyof MusicInfo, value: string | number) => {
+    console.log("文本编辑前的值:", field, musicInfo[field]);
+    console.log("编辑后的新值:", value);
+    setMusicInfo((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  // 处理封面上传
+  const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setMusicInfo((prev) => ({
+          ...prev,
+          coverUrl: event.target?.result as string,
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // 处理海报保存
+  const handleSavePoster = async () => {
+    if (!canvasRef.current) return;
+
+    setIsSaving(true);
+    try {
+      // 创建临时 canvas
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = 1140;
+      tempCanvas.height = 1740;
+      const tempCtx = tempCanvas.getContext("2d");
+      if (!tempCtx) return;
+
+      // 重新生成海报内容到临时 canvas
+      await generatePosterImage(tempCanvas, musicInfo, selectedTheme, {
+        cover: {
+          size: posterConfig.cover.scale * 1020,
+          visible: posterConfig.cover.visible,
+          x: posterConfig.cover.x,
+          y: posterConfig.cover.y,
+        },
+        title: {
+          size: posterConfig.title.scale * 64,
+          visible: posterConfig.title.visible,
+          x: posterConfig.title.x,
+          y: posterConfig.title.y,
+        },
+        artist: {
+          size: posterConfig.artist.scale * 48,
+          visible: posterConfig.artist.visible,
+          x: posterConfig.artist.x,
+          y: posterConfig.artist.y,
+        },
+        lyrics: {
+          size: posterConfig.lyrics.scale * 40,
+          visible: posterConfig.lyrics.visible,
+          x: posterConfig.lyrics.x,
+          y: posterConfig.lyrics.y,
+        },
+        duration: {
+          size: posterConfig.duration.scale * 36,
+          visible: posterConfig.duration.visible,
+          x: posterConfig.duration.x,
+          y: posterConfig.duration.y,
+        },
+      });
+
+      // 导出为图片
+      const blob = await new Promise<Blob | null>((resolve) => {
+        tempCanvas.toBlob(resolve, "image/png", 1.0);
+      });
+
+      if (!blob) throw new Error("Failed to create image blob");
+
+      // 下载图片
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${musicInfo.title || "poster"}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("保存海报失败:", error);
+      alert("保存海报失败，请重试");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // 更新元素配置
+  const updateElementConfig = (
+    element: keyof PosterConfig,
+    field: keyof PosterElement,
+    value: number | boolean
+  ) => {
+    setPosterConfig((prev) => ({
+      ...prev,
+      [element]: {
+        ...prev[element],
+        [field]: value,
+      },
+    }));
+  };
+
+  // 初始化主题
+  useEffect(() => {
+    const themeId = searchParams.get("theme") || themes[0].id;
+    const theme = themes.find((t) => t.id === themeId) || themes[0];
+    setSelectedTheme(theme);
+  }, [searchParams]);
+
+  // 绘制海报
+  useEffect(() => {
+    if (canvasRef.current && musicInfo && selectedTheme) {
+      console.log("绘制海报时的音乐信息:", musicInfo);
+      generatePosterImage(canvasRef.current, musicInfo, selectedTheme, {
+        cover: {
+          size: posterConfig.cover.scale * 1020,
+          visible: posterConfig.cover.visible,
+          x: posterConfig.cover.x,
+          y: posterConfig.cover.y,
+        },
+        title: {
+          size: posterConfig.title.scale * 64,
+          visible: posterConfig.title.visible,
+          x: posterConfig.title.x,
+          y: posterConfig.title.y,
+        },
+        artist: {
+          size: posterConfig.artist.scale * 48,
+          visible: posterConfig.artist.visible,
+          x: posterConfig.artist.x,
+          y: posterConfig.artist.y,
+        },
+        lyrics: {
+          size: posterConfig.lyrics.scale * 40,
+          visible: posterConfig.lyrics.visible,
+          x: posterConfig.lyrics.x,
+          y: posterConfig.lyrics.y,
+        },
+        duration: {
+          size: posterConfig.duration.scale * 36,
+          visible: posterConfig.duration.visible,
+          x: posterConfig.duration.x,
+          y: posterConfig.duration.y,
+        },
+      });
+    }
+  }, [musicInfo, selectedTheme, posterConfig]);
+
+  // 加载音乐信息
+  useEffect(() => {
+    const loadMusicInfo = async () => {
+      // 处理URL参数传递的音乐信息
+      const params = searchParams;
+      if (params && params.get("title")) {
+        setIsLoading(true);
+        try {
+          const rawLyrics = params.get("lyrics") || "";
+          console.log("URL参数传递的原始歌词:", rawLyrics);
+          const processedLyrics = processLyrics(rawLyrics);
+          console.log("URL参数歌词处理后:", processedLyrics);
+          const info: MusicInfo = {
+            title: params.get("title") || "",
+            artist: params.get("artist") || "",
+            coverUrl: params.get("cover") || "",
+            lyrics: processedLyrics,
+            duration: Number(params.get("duration")) || 0,
+          };
+          console.log("设置的音乐信息:", info);
+          setMusicInfo(info);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "加载音乐信息失败");
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      // 处理音乐链接获取信息
+      const url = searchParams.get("url");
+      if (!url) return;
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // 先解析URL获取平台和ID
+        const { platform, id } = await parseMusicUrl(url);
+        const params = new URLSearchParams({
+          platform,
+          id,
+        });
+
+        const response = await fetch(`/api/music?${params.toString()}`);
+        if (!response.ok) {
+          throw new Error("获取音乐信息失败");
+        }
+        const data = await response.json();
+        data.lyrics = processLyrics(data.lyrics); // 只获取1行歌词
+        setMusicInfo(data);
+      } catch (error) {
+        console.error("获取音乐信息失败:", error);
+        setError(
+          error instanceof Error
+            ? error.message
+            : "获取音乐信息失败，请检查链接是否正确"
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadMusicInfo();
+  }, [searchParams]);
+
+  return (
+    <main className="min-h-screen bg-gray-100 py-12 px-4">
+      {/* 加载状态 */}
+      {isLoading && <LoadingOverlay message="正在获取音乐信息..." />}
+      {isSaving && <LoadingOverlay message="正在生成海报..." />}
+
+      {error ? (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-red-500">{error}</div>
+        </div>
+      ) : (
+        <div className="max-w-6xl mx-auto">
+          {/* 添加导航栏 */}
+          <NavigationBar currentUrl={searchParams.get("url")} />
+
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-center text-gray-900">
+              Card.Catpng.net
+            </h1>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* 左侧预览 */}
+            <div className="lg:col-span-2 bg-white rounded-lg shadow-lg p-6">
+              <div className="relative">
+                <canvas
+                  ref={canvasRef}
+                  width={1140}
+                  height={1740}
+                  className="w-full h-auto"
+                />
+                {isEditing && (
+                  <div className="edit-overlay">
+                    <div className="edit-panel">
+                      <h3 className="text-lg font-medium mb-4">编辑音乐信息</h3>
+                      <div className="space-y-4">
+                        <input
+                          type="text"
+                          value={musicInfo.title}
+                          onChange={(e) =>
+                            handleTextEdit("title", e.target.value)
+                          }
+                          className="input-field"
+                          placeholder="歌曲"
+                        />
+                        <input
+                          type="text"
+                          value={musicInfo.artist}
+                          onChange={(e) =>
+                            handleTextEdit("artist", e.target.value)
+                          }
+                          className="input-field"
+                          placeholder="歌手"
+                        />
+                        <textarea
+                          value={musicInfo.lyrics}
+                          onChange={(e) =>
+                            handleTextEdit("lyrics", e.target.value)
+                          }
+                          className="input-field"
+                          rows={4}
+                          placeholder="歌词"
+                        />
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            时长（秒）
+                          </label>
+                          <input
+                            type="number"
+                            value={musicInfo.duration}
+                            onChange={(e) =>
+                              handleTextEdit("duration", Number(e.target.value))
+                            }
+                            className="input-field"
+                            placeholder="歌曲时长（秒）"
+                            min="0"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            更换封面
+                          </label>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleCoverUpload}
+                            className="file-input"
+                          />
+                        </div>
+                        <div className="flex justify-end space-x-2">
+                          <button
+                            onClick={() => setIsEditing(false)}
+                            className="btn btn-secondary"
+                          >
+                            取消
+                          </button>
+                          <button
+                            onClick={() => setIsEditing(false)}
+                            className="btn btn-primary"
+                          >
+                            确定
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="mt-4 flex justify-between">
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="btn btn-primary"
+                >
+                  编辑内容
+                </button>
+                <button
+                  onClick={handleSavePoster}
+                  className="btn btn-secondary"
+                  disabled={isSaving}
+                >
+                  {isSaving ? "保存中..." : "下载"}
+                </button>
+              </div>
+            </div>
+
+            {/* 右侧控制面板 */}
+            <div className="space-y-6">
+              {/* 主题选择 */}
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                <h2 className="text-xl font-semibold mb-4">选择主题</h2>
+                <div className="grid grid-cols-3 gap-4">
+                  {themes.map((theme) => (
+                    <button
+                      key={theme.id}
+                      onClick={() => setSelectedTheme(theme)}
+                      className={`relative aspect-square rounded-lg border-2 p-2 hover:border-indigo-500 ${
+                        selectedTheme.id === theme.id
+                          ? "border-indigo-500"
+                          : "border-gray-200"
+                      }`}
+                      style={{
+                        background:
+                          theme.backgroundType === "image"
+                            ? `url(${theme.background}) center/cover`
+                            : theme.background,
+                      }}
+                    >
+                      <span
+                        className="block text-sm font-medium text-center"
+                        style={{ color: theme.text }}
+                      >
+                        {theme.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 元素编辑 */}
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                <h2 className="text-xl font-semibold mb-4">元素编辑</h2>
+                <div className="space-y-4">
+                  {Object.entries(posterConfig).map(([key, config]) => (
+                    <div key={key} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium text-gray-700 capitalize">
+                          {key}
+                        </label>
+                        <input
+                          type="checkbox"
+                          checked={config.visible}
+                          onChange={(e) =>
+                            updateElementConfig(
+                              key as keyof PosterConfig,
+                              "visible",
+                              e.target.checked
+                            )
+                          }
+                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm text-gray-500">
+                            位置 X
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={config.x * 100}
+                            onChange={(e) =>
+                              updateElementConfig(
+                                key as keyof PosterConfig,
+                                "x",
+                                Number(e.target.value) / 100
+                              )
+                            }
+                            className="w-full"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-500">
+                            位置 Y
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={config.y * 100}
+                            onChange={(e) =>
+                              updateElementConfig(
+                                key as keyof PosterConfig,
+                                "y",
+                                Number(e.target.value) / 100
+                              )
+                            }
+                            className="w-full"
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="block text-sm text-gray-500">
+                            缩放
+                          </label>
+                          <input
+                            type="range"
+                            min="50"
+                            max="150"
+                            value={config.scale * 100}
+                            onChange={(e) =>
+                              updateElementConfig(
+                                key as keyof PosterConfig,
+                                "scale",
+                                Number(e.target.value) / 100
+                              )
+                            }
+                            className="w-full"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="mt-8 text-center text-sm text-gray-500">
+        如果使用过程有错误，或者你对网站有其他建议，可以发送具体内容到我的邮箱：
+        <a
+          href="mailto:aidaoxx@gmail.com"
+          className="text-indigo-600 hover:text-indigo-800"
+        >
+          aidaoxx@gmail.com
+        </a>
+        ，谢谢
+      </div>
+    </main>
+  );
+}
+</file>
+
+<file path="app/fonts.ts">
+import { Inter } from "next/font/google";
+
+export const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+  fallback: [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Roboto",
+    "Helvetica Neue",
+    "Arial",
+    "sans-serif",
+  ],
+  preload: true,
+  adjustFontFallback: true,
+});
+</file>
+
+<file path="app/globals.css">
+/* app/globals.css */
+/* 此文件定义了全局样式和组件样式
+/* 包括：
+/* 1. Material Icons 字体
+/* 2. 基础样式（body等）
+/* 3. 播放器组件样式
+/* 4. 进度条和音量控制样式
+/* 5. 按钮和图标样式
+*/
+
+/* Material Icons */
+@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .music-player {
+    width: 550px;
+    background-color: #3c3c3c;
+    border-radius: 45px;
+    padding: 20px;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 870px;
+    align-items: center;
+  }
+
+  .music-cover {
+    width: 90%;
+    border-radius: 15px;
+    overflow: hidden;
+    margin-top: 30px;
+    aspect-ratio: 1;
+  }
+
+  .music-cover img {
+    width: 100%;
+    height: 100%;
+    border-radius: 15px;
+    object-fit: cover;
+  }
+
+  .music-info {
+    width: 90%;
+    text-align: left;
+    margin: 30px 0;
+  }
+
+  .music-info h2 {
+    margin: 0;
+    font-size: 25px;
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .music-info p {
+    margin: 5px 0 0;
+    color: #c6c7c9;
+    font-size: 20px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .progress-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 15px 0;
+    width: 90%;
+    position: relative;
+    gap: 15px;
+  }
+
+  .progress-bar,
+  .volume-bar {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 12px;
+    background-color: #c6c7c9;
+    outline: none;
+    border-radius: 10px;
+    margin: 0;
+    flex: 1;
+  }
+
+  .time-info {
+    font-size: 16px;
+    color: #cfcfcf;
+    min-width: 45px;
+    text-align: center;
+  }
+
+  .time-info span {
+    display: inline-block;
+  }
+
+  .progress-bar::-webkit-slider-runnable-track,
+  .volume-bar::-webkit-slider-runnable-track {
+    height: 12px;
+    border-radius: 12px;
+    background: transparent;
+  }
+
+  .progress-bar::-webkit-slider-thumb,
+  .volume-bar::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    background-color: #dfe3e2;
+    cursor: pointer;
+    border-radius: 50%;
+    position: relative;
+    z-index: 2;
+    margin-top: 0;
+  }
+
+  .progress-bar::-moz-range-thumb,
+  .volume-bar::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    background-color: #dfe3e2;
+    cursor: pointer;
+    border-radius: 50%;
+    border: none;
+  }
+
+  .volume-icon {
+    font-family: "Material Symbols Outlined";
+    font-size: 24px;
+    color: #c6c7c9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 45px;
+    flex-shrink: 0;
+  }
+
+  .controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 90%;
+    margin: 15px 0;
+  }
+
+  .playback-buttons {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 30px;
+  }
+
+  .playback-buttons button {
+    background: none;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+  }
+
+  .playback-buttons button:hover {
+    color: #000;
+  }
+
+  .playback-buttons button svg {
+    width: 32px;
+    height: 32px;
+  }
+
+  /* 播放按钮特殊处理 */
+  .playback-buttons button:nth-child(2) {
+    flex: 1.2;
+  }
+  .playback-buttons button:nth-child(2) svg {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* 音量控制容器特殊处理 */
+  .progress-container:last-child {
+    width: 90%;
+    padding: 0;
+    gap: 0;
+  }
+
+  /* 音量条特殊处理 */
+  .progress-container:last-child .volume-bar {
+    margin: 0 15px;
+  }
+}
+
+/* 编辑相关样式 */
+.edit-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.edit-panel {
+  background: white;
+  padding: 2rem;
+  border-radius: 0.5rem;
+  width: 100%;
+  max-width: 32rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* 输入框样式 */
+.input-field {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  margin-bottom: 1rem;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+/* 按钮样式 */
+.btn {
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background-color: #6366f1;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #4f46e5;
+}
+
+.btn-secondary {
+  background-color: #9ca3af;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #6b7280;
+}
+
+/* 滑块样式 */
+.range-slider {
+  width: 100%;
+  height: 4px;
+  background: #e5e7eb;
+  border-radius: 2px;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #6366f1;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* 文件上传样式 */
+.file-input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px dashed #e5e7eb;
+  border-radius: 0.375rem;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+.file-input:hover {
+  border-color: #6366f1;
+  background: #f3f4f6;
+}
+</file>
+
+<file path="app/layout.tsx">
+import type { Metadata } from "next";
+import "./globals.css";
+import Script from "next/script";
+import { inter } from "./fonts";
+
+export const metadata: Metadata = {
+  title: "Card.Catpng.net - 音乐卡片生成器",
+  description: "为你喜欢的音乐生成精美卡片",
+  icons: {
+    shortcut: ["/favicon.ico"],
+  },
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="zh-CN" className={inter.variable}>
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=optional"
+          rel="stylesheet"
+        />
+        {/* Google Analytics 代码 */}
+        <Script
+          strategy="afterInteractive"
+          src={`https://www.googletagmanager.com/gtag/js?id=G-95V6TTBE9N`}
+        />
+        <Script
+          id="google-analytics"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-95V6TTBE9N', {
+                linker: {
+                  domains: ['catpng.net', 'download.catpng.net', 'card.catpng.net', 'convert.catpng.net']
+                },
+                allow_linker: true
+              });
+            `,
+          }}
+        />
+      </head>
+      <body className="font-sans antialiased">{children}</body>
+    </html>
+  );
+}
+</file>
+
+<file path="app/page.tsx">
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+
+// 模板列表
+const templates = [
+  {
+    id: "poster",
+    name: "Poster",
+    description: "音乐海报",
+    image: "/poster.png",
+  },
+  {
+    id: "phone",
+    name: "Phone",
+    description: "音乐小卡",
+    image: "/phone.png",
+  },
+];
+
+export default function Home() {
+  const [url, setUrl] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState("poster");
+  const [imagesLoaded, setImagesLoaded] = useState(false);
+  const [fallbackImages, setFallbackImages] = useState(false);
+
+  // 检测图片加载失败，使用备用方案
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!imagesLoaded) {
+        setFallbackImages(true);
+      }
+    }, 3000); // 3秒后如果图片还未加载，使用备用方案
+
+    return () => clearTimeout(timer);
+  }, [imagesLoaded]);
+
+  return (
+    <main className="min-h-screen bg-gray-100 py-12 px-4">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            Card.Catpng.net
+          </h1>
+          <p className="text-xl text-gray-600 mb-8">
+            选择一个模板，输入网易云音乐链接，自动生成音乐卡片
+          </p>
+
+          {/* 音乐链接输入 */}
+          <div className="max-w-xl mx-auto bg-white rounded-lg shadow-lg p-6 mb-12">
+            <div className="space-y-4">
+              <div>
+                <label
+                  htmlFor="url"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  输入音乐链接
+                </label>
+                <input
+                  type="text"
+                  id="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="请输入网易云音乐链接"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  选择模板
+                </label>
+                <select
+                  value={selectedTemplate}
+                  onChange={(e) => setSelectedTemplate(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                >
+                  {templates.map((template) => (
+                    <option key={template.id} value={template.id}>
+                      {template.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Link
+                href={`/${selectedTemplate}?url=${encodeURIComponent(url)}`}
+                className={`w-full inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                  !url.trim() ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+                onClick={(e) => {
+                  if (!url.trim()) {
+                    e.preventDefault();
+                  }
+                }}
+              >
+                开始创建
+              </Link>
+            </div>
+
+            <div className="mt-4 text-sm text-gray-500">
+              <p>支持的音乐平台：</p>
+              <ul className="list-disc list-inside mt-2">
+                <li>网易云音乐 (music.163.com)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {templates.map((template) => (
+            <div key={template.id} className="block group">
+              <div className="bg-white rounded-lg shadow-lg overflow-hidden transform transition duration-200 hover:scale-105">
+                <div className="relative h-[600px]">
+                  {fallbackImages ? (
+                    // 备用方案：使用普通img标签
+                    <img
+                      src={template.image}
+                      alt={template.name}
+                      className="w-full h-full object-contain"
+                      onLoad={() => setImagesLoaded(true)}
+                    />
+                  ) : (
+                    // 主要方案：使用picture元素和多个源
+                    <picture>
+                      <source srcSet={template.image} type="image/webp" />
+                      <source srcSet={template.image} type="image/png" />
+                      <img
+                        src={template.image}
+                        alt={template.name}
+                        className="w-full h-full object-contain"
+                        onLoad={() => setImagesLoaded(true)}
+                        loading="eager"
+                      />
+                    </picture>
+                  )}
+                </div>
+                <div className="p-6 relative bg-white">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    {template.name}
+                  </h2>
+                  <p className="text-gray-600">{template.description}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <footer className="mt-16 text-center text-sm text-gray-500">
+          <div className="space-y-2">
+            <p>
+              © 2024{" "}
+              <a
+                href="https://card.catpng.net"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-800"
+              >
+                Card.Catpng.net
+              </a>
+              . All rights reserved.
+            </p>
+          </div>
+        </footer>
+      </div>
+    </main>
+  );
+}
+</file>
+
+<file path="lib/themes.ts">
+// lib/themes.ts
+// 此文件定义了所有主题的配置
+
+interface Theme {
+  id: string;
+  name: string;
+  background: string;
+  backgroundType: "color" | "image";
+  text: string;
+  secondary?: string;
+}
+
+// 主题列表
+export const themes: Theme[] = [
+  {
+    id: "light",
+    name: "Light",
+    background: "/templates/light.png",
+    backgroundType: "image",
+    text: "#000000",
+    secondary: "#6a6a6a",
+  },
+  {
+    id: "dark",
+    name: "Dark",
+    background: "/templates/dark.png",
+    backgroundType: "image",
+    text: "#ffffff",
+    secondary: "#b3b3b3",
+  },
+  {
+    id: "nord",
+    name: "Nord",
+    background: "/templates/nord.png",
+    backgroundType: "image",
+    text: "#eceff4",
+    secondary: "#d8dee9",
+  },
+  {
+    id: "catppuccin",
+    name: "Catppuccin",
+    background: "/templates/catppuccin.png",
+    backgroundType: "image",
+    text: "#cdd6f4",
+    secondary: "#bac2de",
+  },
+  {
+    id: "gruvbox",
+    name: "Gruvbox",
+    background: "/templates/gruvbox.png",
+    backgroundType: "image",
+    text: "#ebdbb2",
+    secondary: "#a89984",
+  },
+  {
+    id: "everforest",
+    name: "Everforest",
+    background: "/templates/everforest.png",
+    backgroundType: "image",
+    text: "#d3c6aa",
+    secondary: "#9da9a0",
+  },
+  {
+    id: "rosepine",
+    name: "Rosé Pine",
+    background: "/templates/rosepine.png",
+    backgroundType: "image",
+    text: "#e0def4",
+    secondary: "#908caa",
+  },
+];
+
+// 获取默认主题
+export function getDefaultTheme(): Theme {
+  return themes[0];
+}
+
+// 根据 ID 获取主题
+export function getThemeById(id: string): Theme {
+  return themes.find((theme) => theme.id === id) || getDefaultTheme();
+}
+</file>
+
+<file path="types/index.ts">
+// types/index.ts
+// 此文件定义了项目中使用的所有类型接口和枚举
+// 包括：音乐平台类型、音乐信息接口、海报模板接口、元素类型等
+// 这些类型定义被其他文件引用，确保类型安全
+
+// 音乐平台类型枚举
+export enum MusicPlatform {
+  NETEASE = "netease", // 网易云音乐
+  QQ = "qq", // QQ音乐
+  KUGOU = "kugou", // 酷狗音乐
+  KUWO = "kuwo", // 酷我音乐
+  SPOTIFY = "spotify",
+}
+
+// 音乐信息接口
+export interface MusicInfo {
+  platform: MusicPlatform; // 音乐平台
+  id: string;
+  title: string;
+  artist: string;
+  album?: string;
+  coverUrl: string;
+  lyrics?: string;
+}
+
+// 元素位置
+export interface ElementPosition {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+// 字体配置
+export interface FontConfig {
+  title: string;
+  artist: string;
+  album: string;
+}
+
+// Polaroid 风格配置
+export interface PolaroidStyle {
+  type: "polaroid";
+  coverSize: number;
+  padding: number;
+  bottomSpace: number;
+  font: FontConfig;
+}
+
+// 海报模板接口
+export interface PosterTemplate {
+  id: string; // 模板ID
+  name: string; // 模板名称
+  background: string; // 背景（颜色或图片URL）
+  width: number; // 宽度
+  height: number; // 高度
+  elements?: Record<string, ElementPosition>;
+  style?: PolaroidStyle;
+}
+
+// 海报元素类型
+export enum ElementType {
+  IMAGE = "image",
+  TEXT = "text",
+  PROGRESS = "progress",
+  CONTROLS = "controls",
+  WAVEFORM = "waveform",
+  LYRICS = "lyrics",
+}
+
+// 海报元素接口
+export interface PosterElement {
+  id: string; // 元素ID
+  type: ElementType; // 元素类型
+  x: number | string;
+  y: number | string;
+  width: number | string;
+  height?: number | string;
+  color?: string;
+  fontSize?: string;
+  fontWeight?: string;
+  textAlign?: string;
+  borderRadius?: string;
+  source?: string;
+  text?: string;
+  progress?: number;
+  maxLines?: number;
+  lineHeight?: number;
+}
+
+// 元素样式接口
+export interface ElementStyle {
+  x: number; // X坐标
+  y: number; // Y坐标
+  width?: number; // 宽度（可选）
+  height?: number; // 高度（可选）
+  fontSize?: number; // 字体大小（可选）
+  fontFamily?: string; // 字体（可选）
+  color?: string; // 颜色（可选）
+  textAlign?: CanvasTextAlign; // 文本对齐方式（可选）
+  opacity?: number; // 透明度（可选）
+}
+
+// 主题接口
+export interface Theme {
+  id: string;
+  name: string;
+  background: string; // 可以是颜色值或图片路径
+  backgroundType: "color" | "image"; // 背景类型
+  text: string;
+  secondary?: string; // 次要文本颜色
+}
+</file>
+
+<file path="types/music.ts">
+// types/music.ts
+// 音乐相关的类型定义
+
+// 音乐平台
+export enum MusicPlatform {
+  NETEASE = "netease",
+  QQ = "qq",
+  SPOTIFY = "spotify",
+}
+
+// 音乐信息
+export interface MusicInfo {
+  title: string; // 歌曲标题
+  artist: string; // 艺术家
+  coverUrl: string; // 封面图片URL
+  lyrics: string; // 歌词
+  duration: number; // 歌曲时长(秒)
+  playDuration?: number; // 播放时长(秒)，默认为实际时长的三分之一
+  isEditing?: boolean; // 是否处于编辑状态
+}
+
+// 音乐解析结果接口
+export interface MusicParseResult {
+  platform: MusicPlatform;
+  id: string;
+}
+</file>
+
+<file path="types/poster.ts">
+// Poster模板相关的类型定义
+
+// 主题配置
+export interface PosterTheme {
+  name: string;
+  background: string; // 背景颜色或图片路径
+  backgroundType: "color" | "image"; // 背景类型
+  text: string; // 主要文字颜色
+  secondary: string; // 次要文字颜色
+}
+
+// 字体配置
+export interface PosterFont {
+  title: string; // 标题字体
+  artist: string; // 艺术家字体
+  album: string; // 专辑字体
+  lyrics: string; // 歌词字体
+}
+
+// Poster样式配置
+export interface PosterStyle {
+  coverSize: number; // 封面尺寸
+  padding: number; // 内边距
+  bottomSpace: number; // 底部空间
+  posterBorder: number; // Poster边框宽度
+  posterTop: number; // Poster顶部位置
+  titleSpacing: number; // 标题与封面的间距
+  artistSpacing: number; // 艺术家与标题的间距
+  lyricsSpacing: number; // 歌词与艺术家的间距
+  font: PosterFont; // 字体配置
+}
+
+// 默认主题
+export const defaultTheme: PosterTheme = {
+  name: "默认主题",
+  background: "#191724",
+  backgroundType: "color",
+  text: "#ffffff",
+  secondary: "#a6a6a6",
+};
+
+// 默认样式
+export const defaultStyle: PosterStyle = {
+  coverSize: 700, // 更大的封面尺寸
+  padding: 80, // 更宽的内边距
+  bottomSpace: 300, // 更大的底部空间
+  posterBorder: 60, // Poster边框宽度
+  posterTop: 200, // Poster顶部位置
+  titleSpacing: 120, // 标题与封面的间距
+  artistSpacing: 50, // 艺术家与标题的间距
+  lyricsSpacing: 80, // 歌词与艺术家的间距
+  font: {
+    title: "bold 56px 'Helvetica Neue', sans-serif", // 更大的标题字号
+    artist: "40px 'Helvetica Neue', sans-serif", // 更大的艺术家字号
+    album: "32px 'Helvetica Neue', sans-serif", // 更大的专辑字号
+    lyrics: "28px 'Helvetica Neue', sans-serif", // 歌词字号
+  },
+};
+</file>
+
+<file path="types/spotify.ts">
+// 将文件重命名为poster.ts
+// 修改类型名称,保持内容不变
+export interface PosterConfig {
+  name: string;
+  background: string; // 背景颜色或图片路径
+  backgroundType: "color" | "image"; // 背景类型
+  text: string; // 主要文字颜色
+  secondary: string; // 次要文字颜色
+}
+
+// 字体配置
+export interface SpotifyFont {
+  title: string; // 标题字体
+  artist: string; // 艺术家字体
+  album: string; // 专辑字体
+  lyrics: string; // 歌词字体
+}
+
+// Polaroid 样式配置
+export interface SpotifyStyle {
+  coverSize: number; // 封面尺寸
+  padding: number; // 内边距
+  bottomSpace: number; // 底部空间
+  polaroidBorder: number; // Polaroid 边框宽度
+  polaroidTop: number; // Polaroid 顶部位置
+  titleSpacing: number; // 标题与封面的间距
+  artistSpacing: number; // 艺术家与标题的间距
+  lyricsSpacing: number; // 歌词与艺术家的间距
+  font: SpotifyFont; // 字体配置
+}
+
+// 默认主题
+export const defaultTheme: PosterConfig = {
+  name: "默认主题",
+  background: "#191724",
+  backgroundType: "color",
+  text: "#ffffff",
+  secondary: "#a6a6a6",
+};
+
+// 默认样式
+export const defaultStyle: SpotifyStyle = {
+  coverSize: 700, // 更大的封面尺寸
+  padding: 80, // 更宽的内边距
+  bottomSpace: 300, // 更大的底部空间
+  polaroidBorder: 60, // Polaroid 边框宽度
+  polaroidTop: 200, // Polaroid 顶部位置
+  titleSpacing: 120, // 标题与封面的间距
+  artistSpacing: 30, // 减小艺术家与标题的间距
+  lyricsSpacing: 40, // 减小歌词与艺术家的间距
+  font: {
+    title: "bold 56px 'Helvetica Neue', sans-serif", // 更大的标题字号
+    artist: "48px 'Helvetica Neue', sans-serif", // 调整艺术家字号为48px
+    album: "32px 'Helvetica Neue', sans-serif", // 更大的专辑字号
+    lyrics: "50px 'Helvetica Neue', sans-serif", // 调整歌词字号为50px
+  },
+};
+</file>
+
+<file path="types/theme.ts">
+// types/theme.ts
+// 主题相关的类型定义
+
+// 背景类型
+export type BackgroundType = "color" | "image";
+
+// 主题接口
+export interface Theme {
+  id: string;
+  name: string;
+  background: string; // 颜色值或图片路径
+  backgroundType: BackgroundType;
+  text: string;
+  secondary?: string; // 次要文本颜色
+}
+
+// 主题配置接口
+export interface ThemeConfig {
+  themes: Theme[];
+  defaultTheme: Theme;
+}
+</file>
+
+<file path="utils/color.ts">
+// utils/color.ts
+// 颜色提取和处理工具函数
+
+interface RGB {
+  r: number;
+  g: number;
+  b: number;
+}
+
+interface Lab {
+  l: number;
+  a: number;
+  b: number;
+}
+
+/**
+ * RGB转Lab颜色空间
+ * Lab颜色空间更接近人眼感知
+ */
+const rgbToLab = (r: number, g: number, b: number): Lab => {
+  // 先转换到XYZ空间
+  let x = r * 0.4124 + g * 0.3576 + b * 0.1805;
+  let y = r * 0.2126 + g * 0.7152 + b * 0.0722;
+  let z = r * 0.0193 + g * 0.1192 + b * 0.9505;
+
+  // 标准化
+  x = (x / 255) * 100;
+  y = (y / 255) * 100;
+  z = (z / 255) * 100;
+
+  // XYZ到Lab的转换
+  const f = (t: number) =>
+    t > 0.008856 ? Math.pow(t, 1 / 3) : 7.787 * t + 16 / 116;
+
+  const l = 116 * f(y / 100) - 16;
+  const a = 500 * (f(x / 95.047) - f(y / 100));
+  const b_val = 200 * (f(y / 100) - f(z / 108.883));
+
+  return { l, a, b: b_val };
+};
+
+/**
+ * 计算两个Lab颜色之间的差异
+ * 使用CIEDE2000公式，这是目前最准确的颜色差异计算方法
+ */
+const deltaE = (lab1: Lab, lab2: Lab): number => {
+  const deltaL = lab2.l - lab1.l;
+  const deltaA = lab2.a - lab1.a;
+  const deltaB = lab2.b - lab1.b;
+
+  // 简化版的deltaE计算
+  return Math.sqrt(deltaL * deltaL + deltaA * deltaA + deltaB * deltaB);
+};
+
+/**
+ * 从图片中提取主要颜色
+ * @param imageUrl - 图片URL
+ * @returns Promise<RGB[]> - 返回主要颜色数组
+ */
+export const extractColors = async (imageUrl: string): Promise<RGB[]> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("无法创建canvas上下文"));
+        return;
+      }
+
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+
+      const imageData = ctx.getImageData(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      ).data;
+      const colors: RGB[] = [];
+      const labColors: Lab[] = [];
+
+      // 采样颜色
+      for (let i = 0; i < imageData.length; i += 4 * 10) {
+        // 每10个像素采样一次
+        const r = imageData[i];
+        const g = imageData[i + 1];
+        const b = imageData[i + 2];
+
+        // 转换到Lab空间
+        const lab = rgbToLab(r, g, b);
+
+        // 检查是否是新的主要颜色
+        let isNewColor = true;
+        for (const existingLab of labColors) {
+          if (deltaE(lab, existingLab) < 20) {
+            // 颜色差异阈值
+            isNewColor = false;
+            break;
+          }
+        }
+
+        if (isNewColor && colors.length < 6) {
+          colors.push({ r, g, b });
+          labColors.push(lab);
+        }
+      }
+
+      // 按亮度排序
+      colors.sort((a, b) => {
+        const labA = rgbToLab(a.r, a.g, a.b);
+        const labB = rgbToLab(b.r, b.g, b.b);
+        return labB.l - labA.l; // 按Lab空间的亮度排序
+      });
+
+      resolve(colors);
+    };
+
+    img.onerror = () => {
+      reject(new Error("图片加载失败"));
+    };
+
+    img.src = imageUrl;
+  });
+};
+</file>
+
+<file path="utils/musicParser.ts">
+import { MusicInfo, MusicPlatform } from "@/types/music";
+
+// 音乐相关的优美句子（当没有歌词时使用）
+const MUSIC_QUOTES = [
+  "音乐是流动的建筑，是时光的低语",
+  "旋律是心灵的共鸣，节奏是生命的脉动",
+  "在音符的海洋里，找寻内心的平静",
+  "让音乐带我们去往心灵的远方",
+];
+
+// 从文本中提取URL的函数
+function extractUrl(text: string): string | null {
+  // 匹配http或https开头的URL
+  const urlMatch = text.match(/https?:\/\/[^\s)]+/);
+  return urlMatch ? urlMatch[0] : null;
+}
+
+/**
+ * 解析音乐链接
+ * @param url 音乐链接
+ * @returns 音乐ID
+ */
+export async function parseMusicUrl(url: string): Promise<{
+  platform: MusicPlatform;
+  id: string;
+}> {
+  // 从文本中提取URL
+  const extractedUrl = extractUrl(url);
+  if (!extractedUrl) {
+    throw new Error("未找到有效的音乐链接");
+  }
+  url = extractedUrl;
+
+  // 处理网易云音乐短链接
+  if (url.includes("163cn.tv")) {
+    try {
+      // 使用我们的API来解析短链接
+      const response = await fetch(
+        `/api/resolve-url?url=${encodeURIComponent(url)}`
+      );
+      if (!response.ok) {
+        throw new Error("解析短链接失败");
+      }
+      const data = await response.json();
+      url = data.url;
+    } catch (error) {
+      console.error("解析短链接失败:", error);
+      throw new Error("无法解析分享链接，请使用完整链接");
+    }
+  }
+
+  // 网易云音乐 - 完整链接
+  const neteaseMusicMatch = url.match(/music\.163\.com.*[?&]id=(\d+)/);
+  if (neteaseMusicMatch) {
+    return {
+      platform: MusicPlatform.NETEASE,
+      id: neteaseMusicMatch[1],
+    };
+  }
+
+  // 网易云音乐 - 移动端分享
+  const neteaseMobileMatch = url.match(
+    /^https?:\/\/y\.music\.163\.com\/m\/song\?id=(\d+)/
+  );
+  if (neteaseMobileMatch) {
+    return {
+      platform: MusicPlatform.NETEASE,
+      id: neteaseMobileMatch[1],
+    };
+  }
+
+  // 网易云音乐 - 移动端短链接重定向后的格式
+  const neteaseMobileRedirectMatch = url.match(
+    /^https?:\/\/music\.163\.com\/song\/mobile\/\?id=(\d+)/
+  );
+  if (neteaseMobileRedirectMatch) {
+    return {
+      platform: MusicPlatform.NETEASE,
+      id: neteaseMobileRedirectMatch[1],
+    };
+  }
+
+  throw new Error("不支持的音乐平台或链接格式不正确");
+}
+
+/**
+ * 从API获取音乐信息
+ * @param platform 音乐平台
+ * @param id 音乐ID
+ */
+export const fetchMusicInfo = async (
+  platform: MusicPlatform,
+  id: string
+): Promise<MusicInfo> => {
+  switch (platform) {
+    case MusicPlatform.NETEASE: {
+      // 调用网易云音乐API
+      const params = new URLSearchParams({
+        platform: MusicPlatform.NETEASE,
+        id: id,
+      });
+      const response = await fetch(`/api/music?${params.toString()}`);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "获取音乐信息失败");
+      }
+      return response.json();
+    }
+
+    // 其他平台暂时返回测试数据
+    default:
+      return {
+        title: "歌名",
+        artist: "歌手",
+        coverUrl: "/templates/demo-cover.jpg",
+        lyrics: MUSIC_QUOTES.join("\n"),
+        duration: 180,
+      };
+  }
+};
+
+/**
+ * 处理歌词
+ * @param lyrics 完整歌词
+ * @param lineCount 需要返回的歌词行数，默认为5
+ * @returns 处理后的歌词
+ */
+export const processLyrics = (
+  lyrics: string | null,
+  lineCount: number = 5
+): string => {
+  if (!lyrics) {
+    // 如果没有歌词，返回音乐相关的优美句子
+    return MUSIC_QUOTES.slice(0, lineCount).join("\n");
+  }
+
+  // 移除时间标记并过滤空行
+  const lines = lyrics
+    .split("\n")
+    .map((line) => line.replace(/\[\d{2}:\d{2}\.\d{2,3}\]/g, "").trim())
+    .filter((line) => line && !line.includes("作词") && !line.includes("作曲"));
+
+  if (lines.length <= lineCount) {
+    return lines.join("\n");
+  }
+
+  // 从歌词的1/3处开始选择指定行数，这通常是副歌部分
+  const startIndex = Math.floor(lines.length / 3);
+  return lines.slice(startIndex, startIndex + lineCount).join("\n");
+};
+
+/**
+ * 获取音乐信息
+ * @param url 音乐链接
+ * @returns 音乐信息
+ */
+export const getMusicInfo = async (url: string): Promise<MusicInfo> => {
+  try {
+    // 解析链接
+    const { platform, id } = await parseMusicUrl(url);
+
+    // 获取音乐信息
+    const musicInfo = await fetchMusicInfo(platform, id);
+
+    // 处理歌词
+    musicInfo.lyrics = processLyrics(musicInfo.lyrics);
+    return musicInfo;
+  } catch (error) {
+    console.error("获取音乐信息失败:", error);
+    throw error;
+  }
+};
+</file>
+
+<file path="utils/phone.ts">
+import { MusicInfo } from "@/types/music";
+import { Theme } from "@/types/theme";
+import { extractColors } from "./color";
+
+interface ElementConfig {
+  size: number;
+  visible: boolean;
+  x: number;
+  y: number;
+}
+
+interface RGB {
+  r: number;
+  g: number;
+  b: number;
+}
+
+// 背景设置接口
+interface BackgroundConfig {
+  imageUrl?: string; // 自定义背景图片URL
+  blur?: number; // 模糊程度 (0-20)
+  opacity?: number; // 不透明度 (0-1)
+  gradient?: {
+    angle: number; // 渐变角度 (0-360)
+    colors: string[]; // 渐变颜色数组
+    stops: number[]; // 渐变位置数组 (0-1)
+  };
+}
+
+// 处理图片URL，添加代理
+const getProxiedImageUrl = (url: string) => {
+  // 如果是本地图片或data:URL，直接返回
+  if (url.startsWith("/") || url.startsWith("data:")) {
+    return url;
+  }
+  // 否则通过代理加载
+  return `/api/proxy/image?url=${encodeURIComponent(url)}`;
+};
+
+// 加载图片的辅助函数
+const loadImage = (url: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error(`Failed to load image: ${url}`));
+    img.src = getProxiedImageUrl(url);
+  });
+};
+
+// 创建渐变色
+const createGradient = (
+  ctx: CanvasRenderingContext2D,
+  colors: RGB[],
+  width: number,
+  height: number
+) => {
+  const gradient = ctx.createLinearGradient(0, 0, 0, height);
+  colors.forEach((color, index) => {
+    gradient.addColorStop(
+      index / (colors.length - 1),
+      `rgb(${color.r}, ${color.g}, ${color.b})`
+    );
+  });
+  return gradient;
+};
+
+// 调整颜色亮度
+const adjustBrightness = (color: RGB, factor: number): RGB => {
+  return {
+    r: Math.min(255, Math.max(0, Math.round(color.r * factor))),
+    g: Math.min(255, Math.max(0, Math.round(color.g * factor))),
+    b: Math.min(255, Math.max(0, Math.round(color.b * factor))),
+  };
+};
+
+// 辅助函数：截断文本，不添加省略号
+function truncateText(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  return text.slice(0, maxLength);
+}
+
+// 辅助函数：根据最大宽度截断文本，不添加省略号
+function truncateTextByWidth(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number
+): string {
+  const metrics = ctx.measureText(text);
+  if (metrics.width <= maxWidth) return text;
+
+  let left = 0;
+  let right = text.length;
+  let result = text;
+
+  // 二分查找合适的长度
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2);
+    const truncated = text.slice(0, mid);
+    const width = ctx.measureText(truncated).width;
+
+    if (width <= maxWidth) {
+      result = truncated;
+      left = mid + 1;
+    } else {
+      right = mid - 1;
+    }
+  }
+
+  return result;
+}
+
+// 确保颜色足够暗
+const ensureDarkColor = (color: RGB): RGB => {
+  // 计算颜色的亮度 (0-255)
+  const brightness = (color.r * 299 + color.g * 587 + color.b * 114) / 1000;
+
+  // 如果亮度超过阈值（128），将颜色调暗
+  if (brightness > 128) {
+    const darkFactor = 128 / brightness; // 使亮度降至128
+    return {
+      r: Math.round(color.r * darkFactor),
+      g: Math.round(color.g * darkFactor),
+      b: Math.round(color.b * darkFactor),
+    };
+  }
+  return color;
+};
+
+// 创建更暗的渐变色
+const createDarkGradient = (color: RGB): RGB => {
+  // 将颜色调整到更暗的版本（原始亮度的10%）
+  return {
+    r: Math.round(color.r * 0.1),
+    g: Math.round(color.g * 0.1),
+    b: Math.round(color.b * 0.1),
+  };
+};
+
+// 应用背景模糊效果
+const applyBackgroundBlur = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  blur: number
+) => {
+  ctx.filter = `blur(${blur}px)`;
+  ctx.drawImage(ctx.canvas, x, y, width, height);
+  ctx.filter = "none";
+};
+
+// 创建背景渐变
+const createBackgroundGradient = (
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  angle: number,
+  colors: string[],
+  stops: number[]
+) => {
+  const radians = (angle * Math.PI) / 180;
+  const x = Math.cos(radians);
+  const y = Math.sin(radians);
+  const gradient = ctx.createLinearGradient(
+    width / 2 - x * width,
+    height / 2 - y * height,
+    width / 2 + x * width,
+    height / 2 + y * height
+  );
+
+  colors.forEach((color, index) => {
+    gradient.addColorStop(stops[index], color);
+  });
+
+  return gradient;
+};
+
+export const generatePhonePoster = async (
+  canvas: HTMLCanvasElement,
+  musicInfo: MusicInfo,
+  theme: Theme,
+  config: {
+    cover: ElementConfig;
+    title: ElementConfig;
+    artist: ElementConfig;
+    lyrics: ElementConfig;
+    duration: ElementConfig;
+  },
+  useGradient: boolean = false,
+  backgroundConfig?: BackgroundConfig
+) => {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  try {
+    // 清空画布
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 预加载所有需要的图片
+    const imagePromises: Promise<HTMLImageElement>[] = [];
+    const images: { [key: string]: HTMLImageElement } = {};
+
+    // 加载透明背景图
+    imagePromises.push(
+      loadImage("/templates/phone.png").then((img) => {
+        images.template = img;
+        return img;
+      })
+    );
+
+    // 加载封面图片
+    if (config.cover.visible && musicInfo.coverUrl) {
+      imagePromises.push(
+        loadImage(musicInfo.coverUrl).then((img) => {
+          images.cover = img;
+          return img;
+        })
+      );
+    }
+
+    // 加载自定义背景图片
+    if (backgroundConfig?.imageUrl) {
+      imagePromises.push(
+        loadImage(backgroundConfig.imageUrl).then((img) => {
+          images.background = img;
+          return img;
+        })
+      );
+    }
+
+    // 等待所有图片加载完成
+    await Promise.all(imagePromises);
+
+    // 1. 首先绘制背景
+    if (backgroundConfig?.imageUrl && images.background) {
+      // 创建临时画布用于背景处理
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
+      const tempCtx = tempCanvas.getContext("2d");
+
+      if (tempCtx) {
+        // 绘制背景图片并填充整个画布
+        const scale = Math.max(
+          canvas.width / images.background.width,
+          canvas.height / images.background.height
+        );
+        const scaledWidth = images.background.width * scale;
+        const scaledHeight = images.background.height * scale;
+        const x = (canvas.width - scaledWidth) / 2;
+        const y = (canvas.height - scaledHeight) / 2;
+
+        tempCtx.drawImage(images.background, x, y, scaledWidth, scaledHeight);
+
+        // 应用模糊效果
+        if (backgroundConfig.blur) {
+          applyBackgroundBlur(
+            tempCtx,
+            0,
+            0,
+            canvas.width,
+            canvas.height,
+            backgroundConfig.blur
+          );
+        }
+
+        // 设置背景不透明度
+        ctx.globalAlpha = backgroundConfig.opacity ?? 1;
+        ctx.drawImage(tempCanvas, 0, 0);
+        ctx.globalAlpha = 1;
+
+        // 应用渐变叠加(仅当useGradient为true时)
+        if (useGradient && backgroundConfig.gradient) {
+          const gradient = createBackgroundGradient(
+            ctx,
+            canvas.width,
+            canvas.height,
+            backgroundConfig.gradient.angle,
+            backgroundConfig.gradient.colors,
+            backgroundConfig.gradient.stops
+          );
+          ctx.fillStyle = gradient;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+    } else {
+      // 使用默认背景色
+      let backgroundColor: string | CanvasGradient = "rgb(20, 20, 20)";
+      if (config.cover.visible && musicInfo.coverUrl) {
+        try {
+          const colors = await extractColors(
+            getProxiedImageUrl(musicInfo.coverUrl)
+          );
+          if (colors.length > 0) {
+            const mainColor = ensureDarkColor(colors[0]);
+
+            if (useGradient) {
+              const darkColor = createDarkGradient(mainColor);
+              backgroundColor = createGradient(
+                ctx,
+                [darkColor, mainColor],
+                canvas.width,
+                canvas.height
+              );
+            } else {
+              backgroundColor = `rgb(${mainColor.r}, ${mainColor.g}, ${mainColor.b})`;
+            }
+          }
+        } catch (error) {
+          console.error("提取颜色失败:", error);
+        }
+      }
+      ctx.fillStyle = backgroundColor;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // 2. 绘制封面图片
+    if (config.cover.visible && musicInfo.coverUrl && images.cover) {
+      const x = config.cover.x * canvas.width;
+      const y = config.cover.y * canvas.height;
+      const size = config.cover.size;
+      const radius = 40; // 圆角半径
+
+      // 保存当前状态
+      ctx.save();
+
+      // 创建圆角矩形路径
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + size - radius, y);
+      ctx.quadraticCurveTo(x + size, y, x + size, y + radius);
+      ctx.lineTo(x + size, y + size - radius);
+      ctx.quadraticCurveTo(x + size, y + size, x + size - radius, y + size);
+      ctx.lineTo(x + radius, y + size);
+      ctx.quadraticCurveTo(x, y + size, x, y + size - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+
+      // 裁剪
+      ctx.clip();
+
+      // 绘制图片
+      ctx.drawImage(images.cover, x, y, size, size);
+
+      // 恢复状态
+      ctx.restore();
+    }
+
+    // 3. 最后绘制手机模板
+    if (images.template) {
+      ctx.drawImage(images.template, 0, 0, canvas.width, canvas.height);
+    }
+
+    // 设置文本颜色为#ededed
+    ctx.fillStyle = "#ededed";
+    ctx.textBaseline = "bottom";
+    ctx.textAlign = "left";
+
+    // 绘制作者和歌曲名
+    if (config.title.visible && (musicInfo.title || musicInfo.artist)) {
+      ctx.font = `${config.title.size}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+      const text = `${musicInfo.artist}/${musicInfo.title}`;
+      ctx.fillText(
+        truncateTextByWidth(ctx, text, canvas.width * 0.8),
+        config.title.x * canvas.width,
+        config.title.y * canvas.height
+      );
+    }
+
+    // 绘制歌词
+    if (config.lyrics.visible && musicInfo.lyrics) {
+      ctx.font = `bold ${config.lyrics.size}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+      ctx.fillStyle = "#ffffff"; // 歌词使用白色
+      ctx.fillText(
+        truncateTextByWidth(ctx, musicInfo.lyrics, canvas.width * 0.8),
+        config.lyrics.x * canvas.width,
+        config.lyrics.y * canvas.height
+      );
+    }
+
+    // 绘制实际时长
+    if (config.duration.visible && musicInfo.duration) {
+      ctx.font = `${config.duration.size}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+      ctx.fillStyle = "#ededed"; // 时长使用浅灰色
+      ctx.textAlign = "right"; // 时长靠右对齐
+
+      // 转换时长为mm:ss格式
+      const minutes = Math.floor(musicInfo.duration / 60);
+      const seconds = Math.floor(musicInfo.duration % 60);
+      const timeText = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+
+      ctx.fillText(
+        timeText,
+        config.duration.x * canvas.width,
+        config.duration.y * canvas.height
+      );
+
+      // 绘制播放时长（左对齐，默认为实际时长的三分之一）
+      ctx.textAlign = "left";
+      const playDuration =
+        musicInfo.playDuration || Math.floor(musicInfo.duration / 3);
+      const playMinutes = Math.floor(playDuration / 60);
+      const playSeconds = Math.floor(playDuration % 60);
+      const playTimeText = `${playMinutes}:${playSeconds
+        .toString()
+        .padStart(2, "0")}`;
+
+      ctx.fillText(
+        playTimeText,
+        0.1 * canvas.width, // 左边距10%
+        config.duration.y * canvas.height
+      );
+    }
+  } catch (error) {
+    console.error("生成海报失败:", error);
+  }
+};
+</file>
+
+<file path="utils/poster.ts">
+import { MusicInfo } from "@/types/music";
+import { Theme } from "@/types/theme";
+import { extractColors } from "./color";
+
+interface ElementConfig {
+  size: number;
+  visible: boolean;
+  x: number;
+  y: number;
+}
+
+interface RGB {
+  r: number;
+  g: number;
+  b: number;
+}
+
+// 处理图片URL，添加代理
+const getProxiedImageUrl = (url: string) => {
+  // 如果是本地图片或data URL，直接返回
+  if (url.startsWith("/") || url.startsWith("data:")) {
+    return url;
+  }
+  // 否则通过代理加载
+  return `/api/proxy/image?url=${encodeURIComponent(url)}`;
+};
+
+// 加载图片的辅助函数
+const loadImage = (url: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error(`Failed to load image: ${url}`));
+    img.src = getProxiedImageUrl(url);
+  });
+};
+
+// 预加载图片缓存
+const imageCache = new Map<string, HTMLImageElement>();
+
+// 预加载图片
+const preloadImage = async (url: string): Promise<HTMLImageElement> => {
+  if (!url) return Promise.reject(new Error("No URL provided"));
+
+  // 检查缓存
+  if (imageCache.has(url)) {
+    return imageCache.get(url)!;
+  }
+
+  try {
+    const img = await loadImage(url);
+    imageCache.set(url, img);
+    return img;
+  } catch (error) {
+    console.error("图片加载失败:", error);
+    throw error;
+  }
+};
+
+// 创建圆角矩形路径的辅助函数
+const roundedRect = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number
+) => {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.arc(x + width - radius, y + radius, radius, -Math.PI / 2, 0);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.arc(x + width - radius, y + height - radius, radius, 0, Math.PI / 2);
+  ctx.lineTo(x + radius, y + height);
+  ctx.arc(x + radius, y + height - radius, radius, Math.PI / 2, Math.PI);
+  ctx.lineTo(x, y + radius);
+  ctx.arc(x + radius, y + radius, radius, Math.PI, -Math.PI / 2);
+  ctx.closePath();
+};
+
+// 辅助函数：截断文本，不添加省略号
+function truncateText(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  return text.slice(0, maxLength);
+}
+
+// 辅助函数：根据最大宽度截断文本，不添加省略号
+function truncateTextByWidth(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number
+): string {
+  const metrics = ctx.measureText(text);
+  if (metrics.width <= maxWidth) return text;
+
+  let left = 0;
+  let right = text.length;
+  let result = text;
+
+  // 二分查找合适的长度
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2);
+    const truncated = text.slice(0, mid);
+    const width = ctx.measureText(truncated).width;
+
+    if (width <= maxWidth) {
+      result = truncated;
+      left = mid + 1;
+    } else {
+      right = mid - 1;
+    }
+  }
+
+  return result;
+}
+
+// 优化的颜色提取函数
+const optimizedExtractColors = async (url: string): Promise<RGB[]> => {
+  const cacheKey = `colors_${url}`;
+  const cached = sessionStorage.getItem(cacheKey);
+  if (cached) {
+    return JSON.parse(cached);
+  }
+
+  const colors = await extractColors(url);
+  sessionStorage.setItem(cacheKey, JSON.stringify(colors));
+  return colors;
+};
+
+// 优化的Canvas绘制函数
+export const generatePosterImage = async (
+  canvas: HTMLCanvasElement,
+  musicInfo: MusicInfo,
+  theme: Theme,
+  config: {
+    cover: ElementConfig;
+    title: ElementConfig;
+    artist: ElementConfig;
+    lyrics: ElementConfig;
+    duration: ElementConfig;
+  }
+) => {
+  const ctx = canvas.getContext("2d", { alpha: false });
+  if (!ctx) return;
+
+  try {
+    // 使用普通Canvas作为缓冲区
+    const bufferCanvas = document.createElement("canvas");
+    bufferCanvas.width = canvas.width;
+    bufferCanvas.height = canvas.height;
+    const bufferCtx = bufferCanvas.getContext("2d", { alpha: false });
+    if (!bufferCtx) return;
+
+    // 清空画布
+    bufferCtx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 预加载所有需要的图片
+    const imagePromises: Promise<HTMLImageElement>[] = [];
+
+    if (theme.backgroundType === "image") {
+      imagePromises.push(preloadImage(theme.background));
+    }
+
+    if (config.cover.visible && musicInfo.coverUrl) {
+      imagePromises.push(preloadImage(musicInfo.coverUrl));
+    }
+
+    // 等待所有图片加载完成
+    const loadedImages = await Promise.all(imagePromises);
+    let imageIndex = 0;
+
+    // 绘制背景
+    if (theme.backgroundType === "color") {
+      bufferCtx.fillStyle = theme.background;
+      bufferCtx.fillRect(0, 0, canvas.width, canvas.height);
+    } else {
+      const bgImage = loadedImages[imageIndex++];
+      bufferCtx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+    }
+
+    // 绘制封面图片
+    if (config.cover.visible && musicInfo.coverUrl) {
+      const coverImage = loadedImages[imageIndex++];
+      const x = config.cover.x * canvas.width;
+      const y = config.cover.y * canvas.height;
+      const size = config.cover.size;
+      const radius = Math.min(size * 0.1, 60);
+
+      // 使用路径裁剪来优化圆角绘制
+      bufferCtx.save();
+      roundedRect(bufferCtx, x, y, size, size, radius);
+      bufferCtx.clip();
+      bufferCtx.drawImage(coverImage, x, y, size, size);
+      bufferCtx.restore();
+
+      // 提取颜色（使用缓存版本）
+      try {
+        const colors = await optimizedExtractColors(
+          getProxiedImageUrl(musicInfo.coverUrl)
+        );
+
+        // 绘制颜色块
+        const paletteStartX = 60;
+        const paletteY = 1120;
+        const boxWidth = (canvas.width - 120) / 6;
+        const boxHeight = 44;
+
+        colors.forEach((color, index) => {
+          const x = paletteStartX + boxWidth * index;
+          bufferCtx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
+          bufferCtx.fillRect(x, paletteY, boxWidth, boxHeight);
+        });
+      } catch (error) {
+        console.error("提取颜色失败:", error);
+      }
+    }
+
+    // 设置文本渲染优化
+    bufferCtx.imageSmoothingEnabled = true;
+    bufferCtx.imageSmoothingQuality = "high";
+
+    // 设置文本样式
+    bufferCtx.fillStyle = theme.text;
+    bufferCtx.textBaseline = "top";
+
+    // 绘制标题（限制15个汉字）
+    if (config.title.visible && musicInfo.title) {
+      bufferCtx.textBaseline = "bottom";
+      bufferCtx.font = `bold ${config.title.size}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+      const truncatedTitle = truncateText(musicInfo.title, 15);
+      bufferCtx.fillText(
+        truncatedTitle,
+        config.title.x * canvas.width,
+        config.title.y * canvas.height
+      );
+    }
+
+    // 绘制艺术家（限制15个汉字）
+    if (config.artist.visible && musicInfo.artist) {
+      bufferCtx.textBaseline = "top";
+      bufferCtx.font = `${config.artist.size}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+      const truncatedArtist = truncateText(musicInfo.artist, 20);
+      bufferCtx.fillText(
+        truncatedArtist,
+        config.artist.x * canvas.width,
+        config.artist.y * canvas.height
+      );
+    }
+
+    // 绘制歌词（限制宽度，距离右边缘60px）
+    if (config.lyrics.visible && musicInfo.lyrics) {
+      console.log("绘制歌词时的原始数据:", musicInfo.lyrics);
+      bufferCtx.textBaseline = "top";
+      bufferCtx.font = `${config.lyrics.size}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+      const maxWidth = canvas.width - config.lyrics.x * canvas.width - 60;
+
+      // 按原有段落分割歌词
+      const paragraphs = musicInfo.lyrics.split("\n");
+      console.log("分割后的歌词段落:", paragraphs);
+
+      // 对每个段落进行宽度限制处理
+      const lines: string[] = [];
+      paragraphs.forEach((paragraph) => {
+        const truncatedLine = truncateTextByWidth(
+          bufferCtx,
+          paragraph,
+          maxWidth
+        );
+        lines.push(truncatedLine);
+      });
+      console.log("处理后的歌词行:", lines);
+
+      // 设置行高为字体大小的1.2倍
+      const lineHeight = config.lyrics.size * 1.2;
+
+      // 逐行绘制歌词文本
+      lines.forEach((line, index) => {
+        bufferCtx.fillText(
+          line,
+          config.lyrics.x * canvas.width,
+          config.lyrics.y * canvas.height + index * lineHeight
+        );
+      });
+    }
+
+    // 绘制时长
+    if (config.duration.visible && musicInfo.duration) {
+      bufferCtx.textBaseline = "bottom";
+      bufferCtx.font = `${config.duration.size}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+      const minutes = Math.floor(musicInfo.duration / 60);
+      const seconds = musicInfo.duration % 60;
+      const timeStr = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+      const x = config.duration.x * canvas.width;
+      const y = config.duration.y * canvas.height;
+
+      // 计算文本宽度以实现右对齐
+      const textWidth = bufferCtx.measureText(timeStr).width;
+      bufferCtx.fillText(timeStr, x - textWidth, y);
+    }
+
+    // 将缓冲区Canvas内容复制到主Canvas
+    ctx.drawImage(bufferCanvas, 0, 0);
+  } catch (error) {
+    console.error("生成海报失败:", error);
+    throw error;
+  }
+};
+</file>
+
+<file path="utils/posterGenerator.ts">
+import { MusicInfo } from "@/types";
+
+interface Theme {
+  id: string;
+  name: string;
+  background: string;
+  text: string;
+}
+
+export function generatePoster(
+  canvas: HTMLCanvasElement,
+  musicInfo: MusicInfo,
+  theme: Theme
+) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  // 清空画布
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // 绘制背景
+  ctx.fillStyle = theme.background;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // 加载封面图片
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.src = musicInfo.coverUrl;
+
+  img.onload = () => {
+    // 计算 Polaroid 尺寸
+    const polaroidWidth = canvas.width * 0.8;
+    const polaroidHeight = polaroidWidth * 1.2;
+    const polaroidX = (canvas.width - polaroidWidth) / 2;
+    const polaroidY = (canvas.height - polaroidHeight) / 2;
+
+    // 绘制 Polaroid 边框
+    ctx.fillStyle = "#ffffff";
+    ctx.shadowColor = "rgba(0, 0, 0, 0.2)";
+    ctx.shadowBlur = 20;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 10;
+    ctx.fillRect(polaroidX, polaroidY, polaroidWidth, polaroidHeight);
+
+    // 计算图片尺寸和位置
+    const imageWidth = polaroidWidth * 0.9;
+    const imageHeight = imageWidth;
+    const imageX = polaroidX + (polaroidWidth - imageWidth) / 2;
+    const imageY = polaroidY + (polaroidWidth - imageWidth) / 2;
+
+    // 绘制图片
+    ctx.shadowColor = "transparent";
+    ctx.drawImage(img, imageX, imageY, imageWidth, imageHeight);
+
+    // 绘制文本
+    const textY = imageY + imageHeight + 40;
+    ctx.fillStyle = theme.text;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+
+    // 绘制标题
+    ctx.font = "bold 24px Arial";
+    ctx.fillText(musicInfo.title, canvas.width / 2, textY);
+
+    // 绘制艺术家
+    ctx.font = "18px Arial";
+    ctx.fillText(musicInfo.artist, canvas.width / 2, textY + 30);
+
+    // 绘制专辑
+    if (musicInfo.album) {
+      ctx.font = "16px Arial";
+      ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+      ctx.fillText(musicInfo.album, canvas.width / 2, textY + 60);
+    }
+  };
+
+  img.onerror = () => {
+    console.error("封面图片加载失败");
+    // 绘制占位图
+    ctx.fillStyle = "#f3f4f6";
+    ctx.fillRect(
+      canvas.width * 0.2,
+      canvas.height * 0.2,
+      canvas.width * 0.6,
+      canvas.width * 0.6
+    );
+  };
+}
+</file>
+
+<file path="utils/retry.ts">
+// 定义重试选项接口
+interface RetryOptions {
+  maxAttempts?: number; // 最大重试次数
+  initialDelay?: number; // 初始延迟时间(毫秒)
+  maxDelay?: number; // 最大延迟时间(毫秒)
+  backoff?: number; // 退避系数
+}
+
+/**
+ * 通用的异步函数重试工具
+ * @param fn 需要重试的异步函数
+ * @param options 重试选项
+ * @returns Promise<T> 函数执行结果
+ */
+export async function retry<T>(
+  fn: () => Promise<T>,
+  options: RetryOptions = {}
+): Promise<T> {
+  // 设置默认选项
+  const {
+    maxAttempts = 3, // 默认最多重试3次
+    initialDelay = 1000, // 默认初始延迟1秒
+    maxDelay = 10000, // 默认最大延迟10秒
+    backoff = 2, // 默认退避系数为2
+  } = options;
+
+  let lastError: Error | null = null;
+  let delay = initialDelay;
+
+  // 尝试执行指定次数
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+
+      // 如果是最后一次尝试，则抛出错误
+      if (attempt === maxAttempts) {
+        throw new Error(`重试${maxAttempts}次后失败: ${lastError.message}`);
+      }
+
+      // 计算下一次延迟时间（指数退避）
+      delay = Math.min(delay * backoff, maxDelay);
+
+      // 等待延迟时间后继续重试
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+
+  // 这行代码理论上永远不会执行，但TypeScript需要它
+  throw lastError;
+}
+</file>
+
+<file path="utils/spotify.ts">
+import { MusicInfo } from "@/types/music";
+import { Theme } from "@/types/theme";
+import { extractColors } from "./color";
+
+interface ElementConfig {
+  size: number;
+  visible: boolean;
+  x: number;
+  y: number;
+}
+
+interface RGB {
+  r: number;
+  g: number;
+  b: number;
+}
+
+// 处理图片URL，添加代理
+const getProxiedImageUrl = (url: string) => {
+  // 如果是本地图片，直接返回
+  if (url.startsWith("/")) {
+    return url;
+  }
+  // 否则通过代理加载
+  return `/api/proxy/image?url=${encodeURIComponent(url)}`;
+};
+
+// 加载图片的辅助函数
+const loadImage = (url: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error(`Failed to load image: ${url}`));
+    img.src = getProxiedImageUrl(url);
+  });
+};
+
+// 预加载图片缓存
+const imageCache = new Map<string, HTMLImageElement>();
+
+// 预加载图片
+const preloadImage = async (url: string): Promise<HTMLImageElement> => {
+  if (!url) return Promise.reject(new Error("No URL provided"));
+
+  // 检查缓存
+  if (imageCache.has(url)) {
+    return imageCache.get(url)!;
+  }
+
+  try {
+    const img = await loadImage(url);
+    imageCache.set(url, img);
+    return img;
+  } catch (error) {
+    console.error("图片加载失败:", error);
+    throw error;
+  }
+};
+
+// 创建圆角矩形路径的辅助函数
+const roundedRect = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number
+) => {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.arc(x + width - radius, y + radius, radius, -Math.PI / 2, 0);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.arc(x + width - radius, y + height - radius, radius, 0, Math.PI / 2);
+  ctx.lineTo(x + radius, y + height);
+  ctx.arc(x + radius, y + height - radius, radius, Math.PI / 2, Math.PI);
+  ctx.lineTo(x, y + radius);
+  ctx.arc(x + radius, y + radius, radius, Math.PI, -Math.PI / 2);
+  ctx.closePath();
+};
+
+// 辅助函数：截断文本，不添加省略号
+function truncateText(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  return text.slice(0, maxLength);
+}
+
+// 辅助函数：根据最大宽度截断文本，不添加省略号
+function truncateTextByWidth(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number
+): string {
+  const metrics = ctx.measureText(text);
+  if (metrics.width <= maxWidth) return text;
+
+  let left = 0;
+  let right = text.length;
+  let result = text;
+
+  // 二分查找合适的长度
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2);
+    const truncated = text.slice(0, mid);
+    const width = ctx.measureText(truncated).width;
+
+    if (width <= maxWidth) {
+      result = truncated;
+      left = mid + 1;
+    } else {
+      right = mid - 1;
+    }
+  }
+
+  return result;
+}
+
+export const generateSpotifyPoster = async (
+  canvas: HTMLCanvasElement,
+  musicInfo: MusicInfo,
+  theme: Theme,
+  config: {
+    cover: ElementConfig;
+    title: ElementConfig;
+    artist: ElementConfig;
+    lyrics: ElementConfig;
+    duration: ElementConfig;
+  }
+) => {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  try {
+    // 清空画布
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 预加载所有需要的图片
+    const imagePromises: Promise<HTMLImageElement>[] = [];
+
+    if (theme.backgroundType === "image") {
+      imagePromises.push(preloadImage(theme.background));
+    }
+
+    if (config.cover.visible && musicInfo.coverUrl) {
+      imagePromises.push(preloadImage(musicInfo.coverUrl));
+    }
+
+    // 等待所有图片加载完成
+    const loadedImages = await Promise.all(imagePromises);
+    let imageIndex = 0;
+
+    // 绘制背景
+    if (theme.backgroundType === "color") {
+      ctx.fillStyle = theme.background;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    } else {
+      const bgImage = loadedImages[imageIndex++];
+      ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+    }
+
+    // 绘制封面图片
+    if (config.cover.visible && musicInfo.coverUrl) {
+      const coverImage = loadedImages[imageIndex++];
+      const x = config.cover.x * canvas.width;
+      const y = config.cover.y * canvas.height;
+      const size = config.cover.size;
+      const radius = Math.min(size * 0.1, 60); // 圆角半径为图片尺寸的 10%，最大 60px
+
+      // 保存当前状态
+      ctx.save();
+
+      // 创建圆角路径
+      roundedRect(ctx, x, y, size, size, radius);
+
+      // 裁剪
+      ctx.clip();
+
+      // 绘制图片
+      ctx.drawImage(coverImage, x, y, size, size);
+
+      // 恢复状态
+      ctx.restore();
+
+      // 绘制边框
+      roundedRect(ctx, x, y, size, size, radius);
+      ctx.strokeStyle = "rgba(0, 0, 0, 0.2)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // 提取颜色
+      try {
+        const colors = await extractColors(
+          getProxiedImageUrl(musicInfo.coverUrl)
+        );
+
+        // 绘制颜色块
+        const paletteStartX = 60;
+        const paletteY = 1120;
+        const boxWidth = (canvas.width - 120) / 6;
+        const boxHeight = 44;
+
+        colors.forEach((color, index) => {
+          const x = paletteStartX + boxWidth * index;
+          ctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
+          ctx.fillRect(x, paletteY, boxWidth, boxHeight);
+        });
+      } catch (error) {
+        console.error("提取颜色失败:", error);
+      }
+    }
+
+    // 设置文本样式
+    ctx.fillStyle = theme.text;
+
+    // 绘制标题
+    if (config.title.visible && musicInfo.title) {
+      ctx.textBaseline = "bottom";
+      ctx.font = `bold ${config.title.size}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+      const x = config.title.x * canvas.width;
+      const y = config.title.y * canvas.height;
+      const maxWidth = canvas.width - x - 60;
+      const text = truncateTextByWidth(ctx, musicInfo.title, maxWidth);
+      ctx.fillText(text, x, y);
+    }
+
+    // 绘制艺术家
+    if (config.artist.visible && musicInfo.artist) {
+      ctx.textBaseline = "top";
+      ctx.font = `${config.artist.size}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+      const x = config.artist.x * canvas.width;
+      const y = config.artist.y * canvas.height;
+      const maxWidth = canvas.width - x - 60;
+      const text = truncateTextByWidth(ctx, musicInfo.artist, maxWidth);
+      ctx.fillText(text, x, y);
+    }
+
+    // 绘制歌词
+    if (config.lyrics.visible && musicInfo.lyrics) {
+      ctx.textBaseline = "top";
+      ctx.font = `${config.lyrics.size}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+      const x = config.lyrics.x * canvas.width;
+      const y = config.lyrics.y * canvas.height;
+      const maxWidth = canvas.width - x - 60;
+
+      // 按原有段落分割歌词
+      const paragraphs = musicInfo.lyrics.split("\n");
+
+      // 设置行高为字体大小的1.5倍
+      const lineHeight = config.lyrics.size * 1.5;
+
+      // 逐行绘制歌词文本
+      paragraphs.forEach((paragraph, index) => {
+        if (paragraph.trim()) {
+          // 只处理非空行
+          const truncatedLine = truncateTextByWidth(ctx, paragraph, maxWidth);
+          ctx.fillText(truncatedLine, x, y + index * lineHeight);
+        }
+      });
+    }
+
+    // 绘制时长
+    if (config.duration.visible && musicInfo.duration) {
+      ctx.textBaseline = "bottom";
+      ctx.font = `${config.duration.size}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+      const x = config.duration.x * canvas.width;
+      const y = config.duration.y * canvas.height;
+      const minutes = Math.floor(musicInfo.duration / 60);
+      const seconds = musicInfo.duration % 60;
+      const text = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+      const metrics = ctx.measureText(text);
+      ctx.fillText(text, x - metrics.width, y);
+    }
+  } catch (error) {
+    console.error("生成海报失败:", error);
+    throw error;
+  }
+};
+</file>
+
+<file path=".gitignore">
+node_modules
+</file>
+
+<file path="CONTRIBUTING.md">
+# 贡献指南 | Contributing Guidelines
+
+[English](#english) | [中文](#chinese)
+
+<div id="chinese">
+
+## 🤝 如何贡献
+
+感谢你考虑为 MusicCard 项目做出贡献！以下是参与项目的一些指南。
+
+### 提交 Issue
+
+- 使用 Issue 模板
+- 清晰描述问题或建议
+- 如果是 bug，请提供复现步骤
+- 如果可能，提供截图或录屏
+
+### 提交 Pull Request
+
+1. Fork 本仓库
+2. 创建你的特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交你的修改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 创建一个 Pull Request
+
+### 开发指南
+
+1. 确保你的代码符合项目的代码风格
+2. 添加必要的测试
+3. 更新相关文档
+4. 确保所有测试通过
+
+### 代码规范
+
+- 使用 TypeScript
+- 遵循 ESLint 规则
+- 使用 Prettier 格式化代码
+- 编写清晰的代码注释
+
+</div>
+
+<div id="english">
+
+## 🤝 How to Contribute
+
+Thank you for considering contributing to MusicCard! Here are some guidelines for participating in the project.
+
+### Submitting Issues
+
+- Use the issue template
+- Clearly describe the problem or suggestion
+- If it's a bug, provide steps to reproduce
+- Include screenshots or recordings if possible
+
+### Submitting Pull Requests
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Create a Pull Request
+
+### Development Guidelines
+
+1. Ensure your code follows the project's style
+2. Add necessary tests
+3. Update relevant documentation
+4. Make sure all tests pass
+
+### Code Standards
+
+- Use TypeScript
+- Follow ESLint rules
+- Format code with Prettier
+- Write clear code comments
+
+</div>
+</file>
+
+<file path="eslint.config.mjs">
+import { dirname } from "path";
+import { fileURLToPath } from "url";
+import { FlatCompat } from "@eslint/eslintrc";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const compat = new FlatCompat({
+  baseDirectory: __dirname,
+});
+
+const eslintConfig = [
+  ...compat.extends("next/core-web-vitals", "next/typescript"),
+];
+
+export default eslintConfig;
+</file>
+
+<file path="LICENSE">
+MIT License
+
+Copyright (c) 2024 MusicCard
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+</file>
+
+<file path="next-env.d.ts">
+/// <reference types="next" />
+/// <reference types="next/image-types/global" />
+
+// NOTE: This file should not be edited
+// see https://nextjs.org/docs/app/api-reference/config/typescript for more information.
+</file>
+
+<file path="next.config.js">
+/** @type {import('next').NextConfig} */
+const path = require("path");
+
+const nextConfig = {
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "@": path.resolve(__dirname),
+    };
+    return config;
+  },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "http",
+        hostname: "p1.music.126.net",
+      },
+      {
+        protocol: "https",
+        hostname: "p1.music.126.net",
+      },
+    ],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    minimumCacheTTL: 60,
+    formats: ["image/webp"],
+  },
+  experimental: {
+    serverActions: {
+      allowedOrigins: ["*"],
+    },
+  },
+  optimizeFonts: true,
+  compress: true,
+  poweredByHeader: false,
+  reactStrictMode: true,
+  swcMinify: true,
+};
+
+module.exports = nextConfig;
+</file>
+
+<file path="package.json">
+{
+  "name": "fancard",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@types/uuid": "^10.0.0",
+    "@use-gesture/react": "^10.3.1",
+    "axios": "^1.7.9",
+    "cheerio": "^1.0.0",
+    "next": "15.1.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "uuid": "^11.0.3"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9",
+    "eslint-config-next": "15.1.3",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5"
+  }
+}
+</file>
+
+<file path="postcss.config.js">
+module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+</file>
+
+<file path="README.md">
+# MusicCard - 音乐海报生成器 | Music Poster Generator
+
+[English](#english) | [中文](#chinese)
+
+> 灵感来源: 本项目受 [BeatPrints](https://github.com/TrueMyst/BeatPrints) 启发,旨在提供一个现代化的 Web 版本音乐海报生成工具。
+> Inspired by [BeatPrints](https://github.com/TrueMyst/BeatPrints), this project aims to provide a modern web-based music poster generation tool.
+
+<div id="chinese">
+
+## 🎵 项目介绍
+
+MusicCard 是一个基于 Next.js 开发的在线音乐海报生成工具,让用户能够为自己喜爱的网易云音乐创建精美的可视化海报。
+
+### ✨ 主要特性
+
+- 🎨 支持多种海报主题和布局
+- 🎵 支持网易云音乐链接解析
+- 📱 响应式设计,支持移动端
+- 🌈 自定义海报样式和颜色
+- 📝 支持歌词展示
+- 💾 支持导出高清图片
+
+### 🚀 在线体验
+
+访问 [MusicCard](https://card.catpng.net) 立即体验
+
+### 🛠️ 技术栈
+
+- Next.js 14
+- TypeScript
+- Tailwind CSS
+- 网易云音乐 API
+
+### 📦 本地开发
+
+1. 克隆项目
+
+```bash
+git clone https://github.com/aidaox/MusicCard.git
+cd MusicCard
+```
+
+2. 安装依赖
+
+```bash
+npm install
+# 或
+yarn install
+```
+
+3. 启动开发服务器
+
+```bash
+npm run dev
+# 或
+yarn dev
+```
+
+4. 在浏览器中打开 http://localhost:3000 查看效果
+
+### 🚀 部署说明
+
+本项目推荐使用 Vercel 部署:
+
+1. Fork 本项目到你的 GitHub 账号
+2. 在 [Vercel](https://vercel.com) 上注册账号
+3. 在 Vercel 中导入你 fork 的项目
+4. 点击 "Deploy" 按钮即可完成部署
+
+### 🤝 贡献指南
+
+欢迎提交 Issue 和 Pull Request 来帮助改进项目!
+
+### 📄 开源协议
+
+本项目采用 MIT 协议开源。
+
+</div>
+
+<div id="english">
+
+## 🎵 Introduction
+
+MusicCard is an online music poster generator built with Next.js, allowing users to create beautiful visual posters for their favorite NetEase Cloud Music tracks.
+
+### ✨ Features
+
+- 🎨 Multiple poster themes and layouts
+- 🎵 NetEase Cloud Music link parsing
+- 📱 Responsive design
+- 🌈 Customizable styles and colors
+- 📝 Lyrics display
+- 💾 High-quality image export
+
+### 🚀 Live Demo
+
+Visit [MusicCard](https://card.catpng.net) to try it out
+
+### 🛠️ Tech Stack
+
+- Next.js 14
+- TypeScript
+- Tailwind CSS
+- NetEase Cloud Music API
+
+### 📦 Local Development
+
+1. Clone the repository
+
+```bash
+git clone https://github.com/aidaox/MusicCard.git
+cd MusicCard
+```
+
+2. Install dependencies
+
+```bash
+npm install
+# or
+yarn install
+```
+
+3. Start development server
+
+```bash
+npm run dev
+# or
+yarn dev
+```
+
+4. Open http://localhost:3000 in your browser to see the result
+
+### 🚀 Deployment
+
+We recommend deploying with Vercel:
+
+1. Fork this project to your GitHub account
+2. Sign up for an account on [Vercel](https://vercel.com)
+3. Import your forked project in Vercel
+4. Click "Deploy" to complete the deployment
+
+### 🤝 Contributing
+
+Issues and Pull Requests are welcome!
+
+### 📄 License
+
+This project is licensed under the MIT License.
+
+</div>
+</file>
+
+<file path="tailwind.config.ts">
+import type { Config } from "tailwindcss";
+
+const config: Config = {
+  content: [
+    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ["var(--font-inter)"],
+      },
+    },
+  },
+  plugins: [],
+};
+
+export default config;
+</file>
+
+<file path="tsconfig.json">
+{
+  "compilerOptions": {
+    "target": "es5",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
+</file>
+
+<file path="types.ts">
+// types.ts
+// 此文件定义了项目中使用的类型
+// 包括：
+// 1. 音乐信息类型
+// 2. 海报模板类型
+// 3. 海报元素类型
+// 4. 音乐平台类型
+
+// 元素类型枚举
+export enum ElementType {
+  IMAGE = "image",
+  TEXT = "text",
+  PROGRESS = "progress",
+  CONTROLS = "controls",
+  WAVEFORM = "waveform",
+  LYRICS = "lyrics",
+}
+
+// 音乐平台枚举
+export enum MusicPlatform {
+  NETEASE = "netease",
+  QQ = "qq",
+  SPOTIFY = "spotify",
+  KUGOU = "kugou",
+  KUWO = "kuwo",
+}
+
+// 音乐信息类型
+export interface MusicInfo {
+  title: string;
+  artist: string;
+  album: string;
+  coverUrl: string;
+  lyrics?: string[];
+  platform?: MusicPlatform;
+}
+
+// 海报元素类型
+export interface PosterElement {
+  id: string;
+  type: ElementType;
+  x: number;
+  y: number;
+  width: number;
+  height?: number;
+  color?: string;
+  borderRadius?: string;
+  fontSize?: string;
+  fontWeight?: string;
+  textAlign?: string;
+  lineHeight?: number;
+  maxLines?: number;
+  progress?: number;
+  source?: string;
+}
+
+// 海报模板类型
+export interface PosterTemplate {
+  id: string;
+  name: string;
+  width: number;
+  height: number;
+  background: string;
+  elements: PosterElement[];
+}
+</file>
+
+</files>
