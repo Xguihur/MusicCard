@@ -4,5 +4,7 @@
   "/poster/page": "app/poster/page.js",
   "/api/music/route": "app/api/music/route.js",
   "/api/proxy/image/route": "app/api/proxy/image/route.js",
-  "/phone/page": "app/phone/page.js"
+  "/phone/page": "app/phone/page.js",
+  "/history/page": "app/history/page.js",
+  "/api/music-cards/route": "app/api/music-cards/route.js"
 }
