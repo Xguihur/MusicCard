@@ -6,6 +6,7 @@ import { themes } from "@/lib/themes";
 import { generatePosterImage } from "@/utils/poster";
 import { MusicInfo } from "@/types/music";
 import { parseMusicUrl, processLyrics } from "@/utils/musicParser";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import Link from "next/link";
 
 // 海报元素位置接口
@@ -39,6 +40,16 @@ function LoadingOverlay({ message }: { message: string }) {
 
 // 导航栏组件
 function NavigationBar({ currentUrl }: { currentUrl: string | null }) {
+  const { isCopied, copyToClipboard } = useCopyToClipboard();
+
+  const handleCopyUrl = async () => {
+    const success = await copyToClipboard(window.location.href);
+    if (!success) {
+      // 复制失败时的提示
+      console.error('复制失败，请手动复制链接');
+    }
+  };
+
   return (
     <div className="flex items-center justify-between mb-8">
       <div className="flex items-center space-x-4">
@@ -60,6 +71,26 @@ function NavigationBar({ currentUrl }: { currentUrl: string | null }) {
         >
           Phone
         </Link>
+        <button 
+          className={`px-4 py-2 rounded-md shadow hover:shadow-md transition-all duration-200 flex items-center ${
+            isCopied 
+              ? 'bg-green-500 text-white' 
+              : 'bg-white text-gray-600 hover:text-gray-900'
+          }`}
+          onClick={handleCopyUrl}
+        >
+          {isCopied ? (
+            <>
+              <span className="material-symbols-outlined mr-1 text-sm">check</span>
+              已复制
+            </>
+          ) : (
+            <>
+              <span className="material-symbols-outlined mr-1 text-sm">content_copy</span>
+              复制链接
+            </>
+          )}
+        </button>
       </div>
     </div>
   );

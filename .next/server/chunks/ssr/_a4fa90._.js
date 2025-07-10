@@ -1,5 +1,82 @@
 module.exports = {
 
+"[project]/lib/themes.ts [app-ssr] (ecmascript)": ((__turbopack_context__) => {
+"use strict";
+
+var { r: __turbopack_require__, f: __turbopack_module_context__, i: __turbopack_import__, s: __turbopack_esm__, v: __turbopack_export_value__, n: __turbopack_export_namespace__, c: __turbopack_cache__, M: __turbopack_modules__, l: __turbopack_load__, j: __turbopack_dynamic__, P: __turbopack_resolve_absolute_path__, U: __turbopack_relative_url__, R: __turbopack_resolve_module_id_path__, b: __turbopack_worker_blob_url__, g: global, __dirname, x: __turbopack_external_require__, y: __turbopack_external_import__, z: __turbopack_require_stub__ } = __turbopack_context__;
+{
+// lib/themes.ts
+// 此文件定义了所有主题的配置
+__turbopack_esm__({
+    "getDefaultTheme": (()=>getDefaultTheme),
+    "getThemeById": (()=>getThemeById),
+    "themes": (()=>themes)
+});
+const themes = [
+    {
+        id: "light",
+        name: "Light",
+        background: "/templates/light.png",
+        backgroundType: "image",
+        text: "#000000",
+        secondary: "#6a6a6a"
+    },
+    {
+        id: "dark",
+        name: "Dark",
+        background: "/templates/dark.png",
+        backgroundType: "image",
+        text: "#ffffff",
+        secondary: "#b3b3b3"
+    },
+    {
+        id: "nord",
+        name: "Nord",
+        background: "/templates/nord.png",
+        backgroundType: "image",
+        text: "#eceff4",
+        secondary: "#d8dee9"
+    },
+    {
+        id: "catppuccin",
+        name: "Catppuccin",
+        background: "/templates/catppuccin.png",
+        backgroundType: "image",
+        text: "#cdd6f4",
+        secondary: "#bac2de"
+    },
+    {
+        id: "gruvbox",
+        name: "Gruvbox",
+        background: "/templates/gruvbox.png",
+        backgroundType: "image",
+        text: "#ebdbb2",
+        secondary: "#a89984"
+    },
+    {
+        id: "everforest",
+        name: "Everforest",
+        background: "/templates/everforest.png",
+        backgroundType: "image",
+        text: "#d3c6aa",
+        secondary: "#9da9a0"
+    },
+    {
+        id: "rosepine",
+        name: "Rosé Pine",
+        background: "/templates/rosepine.png",
+        backgroundType: "image",
+        text: "#e0def4",
+        secondary: "#908caa"
+    }
+];
+function getDefaultTheme() {
+    return themes[0];
+}
+function getThemeById(id) {
+    return themes.find((theme)=>theme.id === id) || getDefaultTheme();
+}
+}}),
 "[project]/utils/color.ts [app-ssr] (ecmascript)": ((__turbopack_context__) => {
 "use strict";
 
@@ -101,19 +178,19 @@ const extractColors = async (imageUrl)=>{
     });
 };
 }}),
-"[project]/utils/phone.ts [app-ssr] (ecmascript)": ((__turbopack_context__) => {
+"[project]/utils/poster.ts [app-ssr] (ecmascript)": ((__turbopack_context__) => {
 "use strict";
 
 var { r: __turbopack_require__, f: __turbopack_module_context__, i: __turbopack_import__, s: __turbopack_esm__, v: __turbopack_export_value__, n: __turbopack_export_namespace__, c: __turbopack_cache__, M: __turbopack_modules__, l: __turbopack_load__, j: __turbopack_dynamic__, P: __turbopack_resolve_absolute_path__, U: __turbopack_relative_url__, R: __turbopack_resolve_module_id_path__, b: __turbopack_worker_blob_url__, g: global, __dirname, x: __turbopack_external_require__, y: __turbopack_external_import__, z: __turbopack_require_stub__ } = __turbopack_context__;
 {
 __turbopack_esm__({
-    "generatePhonePoster": (()=>generatePhonePoster)
+    "generatePosterImage": (()=>generatePosterImage)
 });
 var __TURBOPACK__imported__module__$5b$project$5d2f$utils$2f$color$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_import__("[project]/utils/color.ts [app-ssr] (ecmascript)");
 ;
 // 处理图片URL，添加代理
 const getProxiedImageUrl = (url)=>{
-    // 如果是本地图片或data:URL，直接返回
+    // 如果是本地图片或data URL，直接返回
     if (url.startsWith("/") || url.startsWith("data:")) {
         return url;
     }
@@ -130,21 +207,37 @@ const loadImage = (url)=>{
         img.src = getProxiedImageUrl(url);
     });
 };
-// 创建渐变色
-const createGradient = (ctx, colors, width, height)=>{
-    const gradient = ctx.createLinearGradient(0, 0, 0, height);
-    colors.forEach((color, index)=>{
-        gradient.addColorStop(index / (colors.length - 1), `rgb(${color.r}, ${color.g}, ${color.b})`);
-    });
-    return gradient;
+// 预加载图片缓存
+const imageCache = new Map();
+// 预加载图片
+const preloadImage = async (url)=>{
+    if (!url) return Promise.reject(new Error("No URL provided"));
+    // 检查缓存
+    if (imageCache.has(url)) {
+        return imageCache.get(url);
+    }
+    try {
+        const img = await loadImage(url);
+        imageCache.set(url, img);
+        return img;
+    } catch (error) {
+        console.error("图片加载失败:", error);
+        throw error;
+    }
 };
-// 调整颜色亮度
-const adjustBrightness = (color, factor)=>{
-    return {
-        r: Math.min(255, Math.max(0, Math.round(color.r * factor))),
-        g: Math.min(255, Math.max(0, Math.round(color.g * factor))),
-        b: Math.min(255, Math.max(0, Math.round(color.b * factor)))
-    };
+// 创建圆角矩形路径的辅助函数
+const roundedRect = (ctx, x, y, width, height, radius)=>{
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.arc(x + width - radius, y + radius, radius, -Math.PI / 2, 0);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.arc(x + width - radius, y + height - radius, radius, 0, Math.PI / 2);
+    ctx.lineTo(x + radius, y + height);
+    ctx.arc(x + radius, y + height - radius, radius, Math.PI / 2, Math.PI);
+    ctx.lineTo(x, y + radius);
+    ctx.arc(x + radius, y + radius, radius, Math.PI, -Math.PI / 2);
+    ctx.closePath();
 };
 // 辅助函数：截断文本，不添加省略号
 function truncateText(text, maxLength) {
@@ -172,199 +265,143 @@ function truncateTextByWidth(ctx, text, maxWidth) {
     }
     return result;
 }
-// 确保颜色足够暗
-const ensureDarkColor = (color)=>{
-    // 计算颜色的亮度 (0-255)
-    const brightness = (color.r * 299 + color.g * 587 + color.b * 114) / 1000;
-    // 如果亮度超过阈值（128），将颜色调暗
-    if (brightness > 128) {
-        const darkFactor = 128 / brightness; // 使亮度降至128
-        return {
-            r: Math.round(color.r * darkFactor),
-            g: Math.round(color.g * darkFactor),
-            b: Math.round(color.b * darkFactor)
-        };
+// 优化的颜色提取函数
+const optimizedExtractColors = async (url)=>{
+    const cacheKey = `colors_${url}`;
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) {
+        return JSON.parse(cached);
     }
-    return color;
+    const colors = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$utils$2f$color$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["extractColors"])(url);
+    sessionStorage.setItem(cacheKey, JSON.stringify(colors));
+    return colors;
 };
-// 创建更暗的渐变色
-const createDarkGradient = (color)=>{
-    // 将颜色调整到更暗的版本（原始亮度的10%）
-    return {
-        r: Math.round(color.r * 0.1),
-        g: Math.round(color.g * 0.1),
-        b: Math.round(color.b * 0.1)
-    };
-};
-// 应用背景模糊效果
-const applyBackgroundBlur = (ctx, x, y, width, height, blur)=>{
-    ctx.filter = `blur(${blur}px)`;
-    ctx.drawImage(ctx.canvas, x, y, width, height);
-    ctx.filter = "none";
-};
-// 创建背景渐变
-const createBackgroundGradient = (ctx, width, height, angle, colors, stops)=>{
-    const radians = angle * Math.PI / 180;
-    const x = Math.cos(radians);
-    const y = Math.sin(radians);
-    const gradient = ctx.createLinearGradient(width / 2 - x * width, height / 2 - y * height, width / 2 + x * width, height / 2 + y * height);
-    colors.forEach((color, index)=>{
-        gradient.addColorStop(stops[index], color);
+const generatePosterImage = async (canvas, musicInfo, theme, config)=>{
+    const ctx = canvas.getContext("2d", {
+        alpha: false
     });
-    return gradient;
-};
-const generatePhonePoster = async (canvas, musicInfo, theme, config, useGradient = false, backgroundConfig)=>{
-    const ctx = canvas.getContext("2d");
     if (!ctx) return;
     try {
+        // 使用普通Canvas作为缓冲区
+        const bufferCanvas = document.createElement("canvas");
+        bufferCanvas.width = canvas.width;
+        bufferCanvas.height = canvas.height;
+        const bufferCtx = bufferCanvas.getContext("2d", {
+            alpha: false
+        });
+        if (!bufferCtx) return;
         // 清空画布
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        bufferCtx.clearRect(0, 0, canvas.width, canvas.height);
         // 预加载所有需要的图片
         const imagePromises = [];
-        const images = {};
-        // 加载透明背景图
-        imagePromises.push(loadImage("/templates/phone.png").then((img)=>{
-            images.template = img;
-            return img;
-        }));
-        // 加载封面图片
-        if (config.cover.visible && musicInfo.coverUrl) {
-            imagePromises.push(loadImage(musicInfo.coverUrl).then((img)=>{
-                images.cover = img;
-                return img;
-            }));
+        if (theme.backgroundType === "image") {
+            imagePromises.push(preloadImage(theme.background));
         }
-        // 加载自定义背景图片
-        if (backgroundConfig?.imageUrl) {
-            imagePromises.push(loadImage(backgroundConfig.imageUrl).then((img)=>{
-                images.background = img;
-                return img;
-            }));
+        if (config.cover.visible && musicInfo.coverUrl) {
+            imagePromises.push(preloadImage(musicInfo.coverUrl));
         }
         // 等待所有图片加载完成
-        await Promise.all(imagePromises);
-        // 1. 首先绘制背景
-        if (backgroundConfig?.imageUrl && images.background) {
-            // 创建临时画布用于背景处理
-            const tempCanvas = document.createElement("canvas");
-            tempCanvas.width = canvas.width;
-            tempCanvas.height = canvas.height;
-            const tempCtx = tempCanvas.getContext("2d");
-            if (tempCtx) {
-                // 绘制背景图片并填充整个画布
-                const scale = Math.max(canvas.width / images.background.width, canvas.height / images.background.height);
-                const scaledWidth = images.background.width * scale;
-                const scaledHeight = images.background.height * scale;
-                const x = (canvas.width - scaledWidth) / 2;
-                const y = (canvas.height - scaledHeight) / 2;
-                tempCtx.drawImage(images.background, x, y, scaledWidth, scaledHeight);
-                // 应用模糊效果
-                if (backgroundConfig.blur) {
-                    applyBackgroundBlur(tempCtx, 0, 0, canvas.width, canvas.height, backgroundConfig.blur);
-                }
-                // 设置背景不透明度
-                ctx.globalAlpha = backgroundConfig.opacity ?? 1;
-                ctx.drawImage(tempCanvas, 0, 0);
-                ctx.globalAlpha = 1;
-                // 应用渐变叠加(仅当useGradient为true时)
-                if (useGradient && backgroundConfig.gradient) {
-                    const gradient = createBackgroundGradient(ctx, canvas.width, canvas.height, backgroundConfig.gradient.angle, backgroundConfig.gradient.colors, backgroundConfig.gradient.stops);
-                    ctx.fillStyle = gradient;
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                }
-            }
+        const loadedImages = await Promise.all(imagePromises);
+        let imageIndex = 0;
+        // 绘制背景
+        if (theme.backgroundType === "color") {
+            bufferCtx.fillStyle = theme.background;
+            bufferCtx.fillRect(0, 0, canvas.width, canvas.height);
         } else {
-            // 使用默认背景色
-            let backgroundColor = "rgb(20, 20, 20)";
-            if (config.cover.visible && musicInfo.coverUrl) {
-                try {
-                    const colors = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$utils$2f$color$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["extractColors"])(getProxiedImageUrl(musicInfo.coverUrl));
-                    if (colors.length > 0) {
-                        const mainColor = ensureDarkColor(colors[0]);
-                        if (useGradient) {
-                            const darkColor = createDarkGradient(mainColor);
-                            backgroundColor = createGradient(ctx, [
-                                darkColor,
-                                mainColor
-                            ], canvas.width, canvas.height);
-                        } else {
-                            backgroundColor = `rgb(${mainColor.r}, ${mainColor.g}, ${mainColor.b})`;
-                        }
-                    }
-                } catch (error) {
-                    console.error("提取颜色失败:", error);
-                }
-            }
-            ctx.fillStyle = backgroundColor;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            const bgImage = loadedImages[imageIndex++];
+            bufferCtx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
         }
-        // 2. 绘制封面图片
-        if (config.cover.visible && musicInfo.coverUrl && images.cover) {
+        // 绘制封面图片
+        if (config.cover.visible && musicInfo.coverUrl) {
+            const coverImage = loadedImages[imageIndex++];
             const x = config.cover.x * canvas.width;
             const y = config.cover.y * canvas.height;
             const size = config.cover.size;
-            const radius = 40; // 圆角半径
-            // 保存当前状态
-            ctx.save();
-            // 创建圆角矩形路径
-            ctx.beginPath();
-            ctx.moveTo(x + radius, y);
-            ctx.lineTo(x + size - radius, y);
-            ctx.quadraticCurveTo(x + size, y, x + size, y + radius);
-            ctx.lineTo(x + size, y + size - radius);
-            ctx.quadraticCurveTo(x + size, y + size, x + size - radius, y + size);
-            ctx.lineTo(x + radius, y + size);
-            ctx.quadraticCurveTo(x, y + size, x, y + size - radius);
-            ctx.lineTo(x, y + radius);
-            ctx.quadraticCurveTo(x, y, x + radius, y);
-            ctx.closePath();
-            // 裁剪
-            ctx.clip();
-            // 绘制图片
-            ctx.drawImage(images.cover, x, y, size, size);
-            // 恢复状态
-            ctx.restore();
+            const radius = Math.min(size * 0.1, 60);
+            // 使用路径裁剪来优化圆角绘制
+            bufferCtx.save();
+            roundedRect(bufferCtx, x, y, size, size, radius);
+            bufferCtx.clip();
+            bufferCtx.drawImage(coverImage, x, y, size, size);
+            bufferCtx.restore();
+            // 提取颜色（使用缓存版本）
+            try {
+                const colors = await optimizedExtractColors(getProxiedImageUrl(musicInfo.coverUrl));
+                // 绘制颜色块
+                const paletteStartX = 60;
+                const paletteY = 1120;
+                const boxWidth = (canvas.width - 120) / 6;
+                const boxHeight = 44;
+                colors.forEach((color, index)=>{
+                    const x = paletteStartX + boxWidth * index;
+                    bufferCtx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
+                    bufferCtx.fillRect(x, paletteY, boxWidth, boxHeight);
+                });
+            } catch (error) {
+                console.error("提取颜色失败:", error);
+            }
         }
-        // 3. 最后绘制手机模板
-        if (images.template) {
-            ctx.drawImage(images.template, 0, 0, canvas.width, canvas.height);
+        // 设置文本渲染优化
+        bufferCtx.imageSmoothingEnabled = true;
+        bufferCtx.imageSmoothingQuality = "high";
+        // 设置文本样式
+        bufferCtx.fillStyle = theme.text;
+        bufferCtx.textBaseline = "top";
+        // 绘制标题（限制15个汉字）
+        if (config.title.visible && musicInfo.title) {
+            bufferCtx.textBaseline = "bottom";
+            bufferCtx.font = `bold ${config.title.size}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+            const truncatedTitle = truncateText(musicInfo.title, 15);
+            bufferCtx.fillText(truncatedTitle, config.title.x * canvas.width, config.title.y * canvas.height);
         }
-        // 设置文本颜色为#ededed
-        ctx.fillStyle = "#ededed";
-        ctx.textBaseline = "bottom";
-        ctx.textAlign = "left";
-        // 绘制作者和歌曲名
-        if (config.title.visible && (musicInfo.title || musicInfo.artist)) {
-            ctx.font = `${config.title.size}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
-            const text = `${musicInfo.artist}/${musicInfo.title}`;
-            ctx.fillText(truncateTextByWidth(ctx, text, canvas.width * 0.8), config.title.x * canvas.width, config.title.y * canvas.height);
+        // 绘制艺术家（限制15个汉字）
+        if (config.artist.visible && musicInfo.artist) {
+            bufferCtx.textBaseline = "top";
+            bufferCtx.font = `${config.artist.size}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+            const truncatedArtist = truncateText(musicInfo.artist, 20);
+            bufferCtx.fillText(truncatedArtist, config.artist.x * canvas.width, config.artist.y * canvas.height);
         }
-        // 绘制歌词
+        // 绘制歌词（限制宽度，距离右边缘60px）
         if (config.lyrics.visible && musicInfo.lyrics) {
-            ctx.font = `bold ${config.lyrics.size}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
-            ctx.fillStyle = "#ffffff"; // 歌词使用白色
-            ctx.fillText(truncateTextByWidth(ctx, musicInfo.lyrics, canvas.width * 0.8), config.lyrics.x * canvas.width, config.lyrics.y * canvas.height);
+            console.log("绘制歌词时的原始数据:", musicInfo.lyrics);
+            bufferCtx.textBaseline = "top";
+            bufferCtx.font = `${config.lyrics.size}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+            const maxWidth = canvas.width - config.lyrics.x * canvas.width - 60;
+            // 按原有段落分割歌词
+            const paragraphs = musicInfo.lyrics.split("\n");
+            console.log("分割后的歌词段落:", paragraphs);
+            // 对每个段落进行宽度限制处理
+            const lines = [];
+            paragraphs.forEach((paragraph)=>{
+                const truncatedLine = truncateTextByWidth(bufferCtx, paragraph, maxWidth);
+                lines.push(truncatedLine);
+            });
+            console.log("处理后的歌词行:", lines);
+            // 设置行高为字体大小的1.2倍
+            const lineHeight = config.lyrics.size * 1.2;
+            // 逐行绘制歌词文本
+            lines.forEach((line, index)=>{
+                bufferCtx.fillText(line, config.lyrics.x * canvas.width, config.lyrics.y * canvas.height + index * lineHeight);
+            });
         }
-        // 绘制实际时长
+        // 绘制时长
         if (config.duration.visible && musicInfo.duration) {
-            ctx.font = `${config.duration.size}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
-            ctx.fillStyle = "#ededed"; // 时长使用浅灰色
-            ctx.textAlign = "right"; // 时长靠右对齐
-            // 转换时长为mm:ss格式
+            bufferCtx.textBaseline = "bottom";
+            bufferCtx.font = `${config.duration.size}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
             const minutes = Math.floor(musicInfo.duration / 60);
-            const seconds = Math.floor(musicInfo.duration % 60);
-            const timeText = `${minutes}:${seconds.toString().padStart(2, "0")}`;
-            ctx.fillText(timeText, config.duration.x * canvas.width, config.duration.y * canvas.height);
-            // 绘制播放时长（左对齐，默认为实际时长的三分之一）
-            ctx.textAlign = "left";
-            const playDuration = musicInfo.playDuration || Math.floor(musicInfo.duration / 3);
-            const playMinutes = Math.floor(playDuration / 60);
-            const playSeconds = Math.floor(playDuration % 60);
-            const playTimeText = `${playMinutes}:${playSeconds.toString().padStart(2, "0")}`;
-            ctx.fillText(playTimeText, 0.1 * canvas.width, config.duration.y * canvas.height);
+            const seconds = musicInfo.duration % 60;
+            const timeStr = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+            const x = config.duration.x * canvas.width;
+            const y = config.duration.y * canvas.height;
+            // 计算文本宽度以实现右对齐
+            const textWidth = bufferCtx.measureText(timeStr).width;
+            bufferCtx.fillText(timeStr, x - textWidth, y);
         }
+        // 将缓冲区Canvas内容复制到主Canvas
+        ctx.drawImage(bufferCanvas, 0, 0);
     } catch (error) {
         console.error("生成海报失败:", error);
+        throw error;
     }
 };
 }}),
@@ -516,19 +553,79 @@ const getMusicInfo = async (url)=>{
     }
 };
 }}),
-"[project]/app/phone/PhoneContent.tsx [app-ssr] (ecmascript)": ((__turbopack_context__) => {
+"[project]/hooks/useCopyToClipboard.ts [app-ssr] (ecmascript)": ((__turbopack_context__) => {
 "use strict";
 
 var { r: __turbopack_require__, f: __turbopack_module_context__, i: __turbopack_import__, s: __turbopack_esm__, v: __turbopack_export_value__, n: __turbopack_export_namespace__, c: __turbopack_cache__, M: __turbopack_modules__, l: __turbopack_load__, j: __turbopack_dynamic__, P: __turbopack_resolve_absolute_path__, U: __turbopack_relative_url__, R: __turbopack_resolve_module_id_path__, b: __turbopack_worker_blob_url__, g: global, __dirname, x: __turbopack_external_require__, y: __turbopack_external_import__, z: __turbopack_require_stub__ } = __turbopack_context__;
 {
 __turbopack_esm__({
-    "default": (()=>PhoneContent)
+    "useCopyToClipboard": (()=>useCopyToClipboard)
+});
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_import__("[project]/node_modules/next/dist/server/route-modules/app-page/vendored/ssr/react.js [app-ssr] (ecmascript)");
+;
+const useCopyToClipboard = (resetDelay = 2000)=>{
+    const [isCopied, setIsCopied] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
+    const copyToClipboard = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useCallback"])(async (text)=>{
+        if (!navigator?.clipboard) {
+            console.warn('Clipboard not supported');
+            return fallbackCopyTextToClipboard(text);
+        }
+        try {
+            await navigator.clipboard.writeText(text);
+            setIsCopied(true);
+            setTimeout(()=>setIsCopied(false), resetDelay);
+            return true;
+        } catch (error) {
+            console.warn('Copy failed', error);
+            return fallbackCopyTextToClipboard(text);
+        }
+    }, [
+        resetDelay
+    ]);
+    const fallbackCopyTextToClipboard = (text)=>{
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.top = '0';
+        textArea.style.left = '0';
+        textArea.style.position = 'fixed';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            if (successful) {
+                setIsCopied(true);
+                setTimeout(()=>setIsCopied(false), resetDelay);
+            }
+            return successful;
+        } catch (error) {
+            console.error('Fallback copy failed', error);
+            document.body.removeChild(textArea);
+            return false;
+        }
+    };
+    return {
+        isCopied,
+        copyToClipboard
+    };
+};
+}}),
+"[project]/app/poster/SpotifyContent.tsx [app-ssr] (ecmascript)": ((__turbopack_context__) => {
+"use strict";
+
+var { r: __turbopack_require__, f: __turbopack_module_context__, i: __turbopack_import__, s: __turbopack_esm__, v: __turbopack_export_value__, n: __turbopack_export_namespace__, c: __turbopack_cache__, M: __turbopack_modules__, l: __turbopack_load__, j: __turbopack_dynamic__, P: __turbopack_resolve_absolute_path__, U: __turbopack_relative_url__, R: __turbopack_resolve_module_id_path__, b: __turbopack_worker_blob_url__, g: global, __dirname, x: __turbopack_external_require__, y: __turbopack_external_import__, z: __turbopack_require_stub__ } = __turbopack_context__;
+{
+__turbopack_esm__({
+    "default": (()=>PosterContent)
 });
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_import__("[project]/node_modules/next/dist/server/route-modules/app-page/vendored/ssr/react-jsx-dev-runtime.js [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_import__("[project]/node_modules/next/dist/server/route-modules/app-page/vendored/ssr/react.js [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_import__("[project]/node_modules/next/navigation.js [app-ssr] (ecmascript)");
-var __TURBOPACK__imported__module__$5b$project$5d2f$utils$2f$phone$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_import__("[project]/utils/phone.ts [app-ssr] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$themes$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_import__("[project]/lib/themes.ts [app-ssr] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$utils$2f$poster$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_import__("[project]/utils/poster.ts [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$utils$2f$musicParser$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_import__("[project]/utils/musicParser.ts [app-ssr] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$hooks$2f$useCopyToClipboard$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_import__("[project]/hooks/useCopyToClipboard.ts [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_import__("[project]/node_modules/next/dist/client/app-dir/link.js [app-ssr] (ecmascript)");
 "use client";
 ;
@@ -537,48 +634,8 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist
 ;
 ;
 ;
-// 默认主题
-const phoneTheme = {
-    id: "phone",
-    name: "手机风格",
-    background: "/templates/phone.png",
-    backgroundType: "image",
-    text: "#ffffff",
-    secondary: "#cccccc"
-};
-// 海报元素配置
-const posterConfig = {
-    cover: {
-        x: 0.1,
-        y: 0.04,
-        scale: 1,
-        visible: true
-    },
-    title: {
-        x: 0.1,
-        y: 0.693,
-        scale: 1,
-        visible: true
-    },
-    artist: {
-        x: 0.1,
-        y: 0.693,
-        scale: 1,
-        visible: true
-    },
-    lyrics: {
-        x: 0.1,
-        y: 0.64,
-        scale: 1,
-        visible: true
-    },
-    duration: {
-        x: 0.9,
-        y: 0.743,
-        scale: 1,
-        visible: true
-    }
-};
+;
+;
 // 加载状态组件
 function LoadingOverlay({ message }) {
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -589,32 +646,40 @@ function LoadingOverlay({ message }) {
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                     className: "inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mb-4"
                 }, void 0, false, {
-                    fileName: "[project]/app/phone/PhoneContent.tsx",
-                    lineNumber: 64,
+                    fileName: "[project]/app/poster/SpotifyContent.tsx",
+                    lineNumber: 34,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                     className: "text-gray-700",
                     children: message
                 }, void 0, false, {
-                    fileName: "[project]/app/phone/PhoneContent.tsx",
-                    lineNumber: 65,
+                    fileName: "[project]/app/poster/SpotifyContent.tsx",
+                    lineNumber: 35,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
-            fileName: "[project]/app/phone/PhoneContent.tsx",
-            lineNumber: 63,
+            fileName: "[project]/app/poster/SpotifyContent.tsx",
+            lineNumber: 33,
             columnNumber: 7
         }, this)
     }, void 0, false, {
-        fileName: "[project]/app/phone/PhoneContent.tsx",
-        lineNumber: 62,
+        fileName: "[project]/app/poster/SpotifyContent.tsx",
+        lineNumber: 32,
         columnNumber: 5
     }, this);
 }
 // 导航栏组件
 function NavigationBar({ currentUrl }) {
+    const { isCopied, copyToClipboard } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$hooks$2f$useCopyToClipboard$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useCopyToClipboard"])();
+    const handleCopyUrl = async ()=>{
+        const success = await copyToClipboard(window.location.href);
+        if (!success) {
+            // 复制失败时的提示
+            console.error('复制失败，请手动复制链接');
+        }
+    };
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
         className: "flex items-center justify-between mb-8",
         children: [
@@ -628,20 +693,20 @@ function NavigationBar({ currentUrl }) {
                             className: "material-symbols-outlined mr-1",
                             children: "home"
                         }, void 0, false, {
-                            fileName: "[project]/app/phone/PhoneContent.tsx",
-                            lineNumber: 80,
+                            fileName: "[project]/app/poster/SpotifyContent.tsx",
+                            lineNumber: 60,
                             columnNumber: 11
                         }, this),
                         "返回首页"
                     ]
                 }, void 0, true, {
-                    fileName: "[project]/app/phone/PhoneContent.tsx",
-                    lineNumber: 76,
+                    fileName: "[project]/app/poster/SpotifyContent.tsx",
+                    lineNumber: 56,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
-                fileName: "[project]/app/phone/PhoneContent.tsx",
-                lineNumber: 75,
+                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                lineNumber: 55,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -651,70 +716,69 @@ function NavigationBar({ currentUrl }) {
                         className: "text-gray-500",
                         children: "切换模板："
                     }, void 0, false, {
-                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                        lineNumber: 85,
+                        fileName: "[project]/app/poster/SpotifyContent.tsx",
+                        lineNumber: 65,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
-                        href: `/poster${currentUrl ? `?url=${encodeURIComponent(currentUrl)}` : ""}`,
+                        href: `/phone${currentUrl ? `?url=${encodeURIComponent(currentUrl)}` : ""}`,
                         className: "px-4 py-2 bg-white rounded-md shadow hover:shadow-md transition-shadow text-gray-600 hover:text-gray-900",
-                        children: "Poster"
+                        children: "Phone"
                     }, void 0, false, {
-                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                        lineNumber: 86,
-                        columnNumber: 9
-                    }, this)
-                ]
-            }, void 0, true, {
-                fileName: "[project]/app/phone/PhoneContent.tsx",
-                lineNumber: 84,
-                columnNumber: 7
-            }, this),
-            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                className: "flex items-center space-x-4",
-                children: [
-                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                        className: "text-gray-500",
-                        children: "复制当前路径"
-                    }, void 0, false, {
-                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                        lineNumber: 96,
-                        columnNumber: 9
-                    }, this),
-                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
-                        type: "text",
-                        value: window.location.href,
-                        className: "px-2 py-1 rounded-md border border-gray-300"
-                    }, void 0, false, {
-                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                        lineNumber: 97,
+                        fileName: "[project]/app/poster/SpotifyContent.tsx",
+                        lineNumber: 66,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
-                        className: "px-4 py-2 bg-white rounded-md shadow hover:shadow-md transition-shadow text-gray-600 hover:text-gray-900",
-                        onClick: ()=>copyUrl(window.location.href),
-                        children: "复制"
+                        className: `px-4 py-2 rounded-md shadow hover:shadow-md transition-all duration-200 flex items-center ${isCopied ? 'bg-green-500 text-white' : 'bg-white text-gray-600 hover:text-gray-900'}`,
+                        onClick: handleCopyUrl,
+                        children: isCopied ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Fragment"], {
+                            children: [
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                    className: "material-symbols-outlined mr-1 text-sm",
+                                    children: "check"
+                                }, void 0, false, {
+                                    fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                    lineNumber: 84,
+                                    columnNumber: 15
+                                }, this),
+                                "已复制"
+                            ]
+                        }, void 0, true) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Fragment"], {
+                            children: [
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                    className: "material-symbols-outlined mr-1 text-sm",
+                                    children: "content_copy"
+                                }, void 0, false, {
+                                    fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                    lineNumber: 89,
+                                    columnNumber: 15
+                                }, this),
+                                "复制链接"
+                            ]
+                        }, void 0, true)
                     }, void 0, false, {
-                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                        lineNumber: 102,
+                        fileName: "[project]/app/poster/SpotifyContent.tsx",
+                        lineNumber: 74,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
-                fileName: "[project]/app/phone/PhoneContent.tsx",
-                lineNumber: 95,
+                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                lineNumber: 64,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
-        fileName: "[project]/app/phone/PhoneContent.tsx",
-        lineNumber: 74,
+        fileName: "[project]/app/poster/SpotifyContent.tsx",
+        lineNumber: 54,
         columnNumber: 5
     }, this);
 }
-function PhoneContent() {
+function PosterContent() {
     const searchParams = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useSearchParams"])();
     const canvasRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRef"])(null);
+    const [selectedTheme, setSelectedTheme] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$themes$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["themes"][0]);
     const [musicInfo, setMusicInfo] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])({
         title: "",
         artist: "",
@@ -722,27 +786,47 @@ function PhoneContent() {
         lyrics: "",
         duration: 0
     });
+    const [isEditing, setIsEditing] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
     const [isLoading, setIsLoading] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
     const [error, setError] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(null);
     const [isSaving, setIsSaving] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
-    const [useGradient, setUseGradient] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
-    const [backgroundConfig, setBackgroundConfig] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])({
-        blur: 0,
-        opacity: 1,
-        gradient: {
-            angle: 180,
-            colors: [
-                "rgba(0,0,0,0.7)",
-                "rgba(0,0,0,0.3)"
-            ],
-            stops: [
-                0,
-                1
-            ]
+    // 海报元素配置
+    const [posterConfig, setPosterConfig] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])({
+        cover: {
+            x: 0.053,
+            y: 0.034,
+            scale: 1,
+            visible: true
+        },
+        title: {
+            x: 0.053,
+            y: 0.73,
+            scale: 1,
+            visible: true
+        },
+        artist: {
+            x: 0.053,
+            y: 0.749,
+            scale: 1,
+            visible: true
+        },
+        lyrics: {
+            x: 0.053,
+            y: 0.801,
+            scale: 1,
+            visible: true
+        },
+        duration: {
+            x: 0.947,
+            y: 0.73,
+            scale: 1,
+            visible: true
         }
     });
     // 处理文本编辑
     const handleTextEdit = (field, value)=>{
+        console.log("文本编辑前的值:", field, musicInfo[field]);
+        console.log("编辑后的新值:", value);
         setMusicInfo((prev)=>({
                 ...prev,
                 [field]: value
@@ -767,61 +851,124 @@ function PhoneContent() {
         if (!canvasRef.current) return;
         setIsSaving(true);
         try {
-            const canvas = canvasRef.current;
-            canvas.toBlob((blob)=>{
-                if (!blob) throw new Error("Failed to create blob");
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `${musicInfo.title}-${musicInfo.artist}.png`;
-                a.click();
-                URL.revokeObjectURL(url);
+            // 创建临时 canvas
+            const tempCanvas = document.createElement("canvas");
+            tempCanvas.width = 1140;
+            tempCanvas.height = 1740;
+            const tempCtx = tempCanvas.getContext("2d");
+            if (!tempCtx) return;
+            // 重新生成海报内容到临时 canvas
+            await (0, __TURBOPACK__imported__module__$5b$project$5d2f$utils$2f$poster$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["generatePosterImage"])(tempCanvas, musicInfo, selectedTheme, {
+                cover: {
+                    size: posterConfig.cover.scale * 1020,
+                    visible: posterConfig.cover.visible,
+                    x: posterConfig.cover.x,
+                    y: posterConfig.cover.y
+                },
+                title: {
+                    size: posterConfig.title.scale * 64,
+                    visible: posterConfig.title.visible,
+                    x: posterConfig.title.x,
+                    y: posterConfig.title.y
+                },
+                artist: {
+                    size: posterConfig.artist.scale * 48,
+                    visible: posterConfig.artist.visible,
+                    x: posterConfig.artist.x,
+                    y: posterConfig.artist.y
+                },
+                lyrics: {
+                    size: posterConfig.lyrics.scale * 40,
+                    visible: posterConfig.lyrics.visible,
+                    x: posterConfig.lyrics.x,
+                    y: posterConfig.lyrics.y
+                },
+                duration: {
+                    size: posterConfig.duration.scale * 36,
+                    visible: posterConfig.duration.visible,
+                    x: posterConfig.duration.x,
+                    y: posterConfig.duration.y
+                }
             });
+            // 导出为图片
+            const blob = await new Promise((resolve)=>{
+                tempCanvas.toBlob(resolve, "image/png", 1.0);
+            });
+            if (!blob) throw new Error("Failed to create image blob");
+            // 下载图片
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${musicInfo.title || "poster"}.png`;
+            a.click();
+            URL.revokeObjectURL(url);
         } catch (error) {
             console.error("保存海报失败:", error);
+            alert("保存海报失败，请重试");
         } finally{
             setIsSaving(false);
         }
     };
-    // 处理时长编辑
-    const handleDurationEdit = (value)=>{
-        // 解析mm:ss格式的时长
-        const [minutes, seconds] = value.split(":").map(Number);
-        if (!isNaN(minutes) && !isNaN(seconds)) {
-            const totalSeconds = minutes * 60 + seconds;
-            handleTextEdit("duration", totalSeconds);
-        }
-    };
-    // 格式化时长为mm:ss
-    const formatDuration = (seconds)=>{
-        const minutes = Math.floor(seconds / 60);
-        const remainingSeconds = Math.floor(seconds % 60);
-        return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
-    };
-    // 处理背景上传
-    const handleBackgroundUpload = (e)=>{
-        const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (event)=>{
-                setBackgroundConfig((prev)=>({
-                        ...prev,
-                        imageUrl: event.target?.result
-                    }));
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-    // 处理背景设置更新
-    const handleBackgroundConfigUpdate = (field, value)=>{
-        setBackgroundConfig((prev)=>({
+    // 更新元素配置
+    const updateElementConfig = (element, field, value)=>{
+        setPosterConfig((prev)=>({
                 ...prev,
-                [field]: value
+                [element]: {
+                    ...prev[element],
+                    [field]: value
+                }
             }));
     };
-    const copyUrl1 = (url)=>{
-        navigator.clipboard.writeText(url);
-    };
+    // 初始化主题
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
+        const themeId = searchParams.get("theme") || __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$themes$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["themes"][0].id;
+        const theme = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$themes$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["themes"].find((t)=>t.id === themeId) || __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$themes$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["themes"][0];
+        setSelectedTheme(theme);
+    }, [
+        searchParams
+    ]);
+    // 绘制海报
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
+        if (canvasRef.current && musicInfo && selectedTheme) {
+            console.log("绘制海报时的音乐信息:", musicInfo);
+            (0, __TURBOPACK__imported__module__$5b$project$5d2f$utils$2f$poster$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["generatePosterImage"])(canvasRef.current, musicInfo, selectedTheme, {
+                cover: {
+                    size: posterConfig.cover.scale * 1020,
+                    visible: posterConfig.cover.visible,
+                    x: posterConfig.cover.x,
+                    y: posterConfig.cover.y
+                },
+                title: {
+                    size: posterConfig.title.scale * 64,
+                    visible: posterConfig.title.visible,
+                    x: posterConfig.title.x,
+                    y: posterConfig.title.y
+                },
+                artist: {
+                    size: posterConfig.artist.scale * 48,
+                    visible: posterConfig.artist.visible,
+                    x: posterConfig.artist.x,
+                    y: posterConfig.artist.y
+                },
+                lyrics: {
+                    size: posterConfig.lyrics.scale * 40,
+                    visible: posterConfig.lyrics.visible,
+                    x: posterConfig.lyrics.x,
+                    y: posterConfig.lyrics.y
+                },
+                duration: {
+                    size: posterConfig.duration.scale * 36,
+                    visible: posterConfig.duration.visible,
+                    x: posterConfig.duration.x,
+                    y: posterConfig.duration.y
+                }
+            });
+        }
+    }, [
+        musicInfo,
+        selectedTheme,
+        posterConfig
+    ]);
     // 加载音乐信息
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
         const loadMusicInfo = async ()=>{
@@ -832,7 +979,7 @@ function PhoneContent() {
                 try {
                     const rawLyrics = params.get("lyrics") || "";
                     console.log("URL参数传递的原始歌词:", rawLyrics);
-                    const processedLyrics = (0, __TURBOPACK__imported__module__$5b$project$5d2f$utils$2f$musicParser$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["processLyrics"])(rawLyrics, 1); // 只获取1行歌词
+                    const processedLyrics = (0, __TURBOPACK__imported__module__$5b$project$5d2f$utils$2f$musicParser$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["processLyrics"])(rawLyrics);
                     console.log("URL参数歌词处理后:", processedLyrics);
                     const info = {
                         title: params.get("title") || "",
@@ -867,9 +1014,7 @@ function PhoneContent() {
                     throw new Error("获取音乐信息失败");
                 }
                 const data = await response.json();
-                console.log("API返回的原始数据:", data);
-                data.lyrics = (0, __TURBOPACK__imported__module__$5b$project$5d2f$utils$2f$musicParser$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["processLyrics"])(data.lyrics, 1); // 只获取1行歌词
-                console.log("API数据歌词处理后:", data);
+                data.lyrics = (0, __TURBOPACK__imported__module__$5b$project$5d2f$utils$2f$musicParser$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["processLyrics"])(data.lyrics); // 只获取1行歌词
                 setMusicInfo(data);
             } catch (error) {
                 console.error("获取音乐信息失败:", error);
@@ -882,62 +1027,21 @@ function PhoneContent() {
     }, [
         searchParams
     ]);
-    // 绘制海报
-    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
-        if (canvasRef.current && musicInfo && phoneTheme) {
-            (0, __TURBOPACK__imported__module__$5b$project$5d2f$utils$2f$phone$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["generatePhonePoster"])(canvasRef.current, musicInfo, phoneTheme, {
-                cover: {
-                    size: 800,
-                    visible: true,
-                    x: posterConfig.cover.x,
-                    y: posterConfig.cover.y
-                },
-                title: {
-                    size: 48,
-                    visible: true,
-                    x: posterConfig.title.x,
-                    y: posterConfig.title.y
-                },
-                artist: {
-                    size: 48,
-                    visible: true,
-                    x: posterConfig.artist.x,
-                    y: posterConfig.artist.y
-                },
-                lyrics: {
-                    size: 50,
-                    visible: true,
-                    x: posterConfig.lyrics.x,
-                    y: posterConfig.lyrics.y
-                },
-                duration: {
-                    size: 28,
-                    visible: true,
-                    x: posterConfig.duration.x,
-                    y: posterConfig.duration.y
-                }
-            }, useGradient, backgroundConfig);
-        }
-    }, [
-        musicInfo,
-        useGradient,
-        backgroundConfig
-    ]);
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("main", {
         className: "min-h-screen bg-gray-100 py-12 px-4",
         children: [
             isLoading && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(LoadingOverlay, {
                 message: "正在获取音乐信息..."
             }, void 0, false, {
-                fileName: "[project]/app/phone/PhoneContent.tsx",
-                lineNumber: 340,
+                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                lineNumber: 348,
                 columnNumber: 21
             }, this),
             isSaving && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(LoadingOverlay, {
                 message: "正在生成海报..."
             }, void 0, false, {
-                fileName: "[project]/app/phone/PhoneContent.tsx",
-                lineNumber: 341,
+                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                lineNumber: 349,
                 columnNumber: 20
             }, this),
             error ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -946,13 +1050,13 @@ function PhoneContent() {
                     className: "text-red-500",
                     children: error
                 }, void 0, false, {
-                    fileName: "[project]/app/phone/PhoneContent.tsx",
-                    lineNumber: 345,
+                    fileName: "[project]/app/poster/SpotifyContent.tsx",
+                    lineNumber: 353,
                     columnNumber: 11
                 }, this)
             }, void 0, false, {
-                fileName: "[project]/app/phone/PhoneContent.tsx",
-                lineNumber: 344,
+                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                lineNumber: 352,
                 columnNumber: 9
             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                 className: "max-w-6xl mx-auto",
@@ -960,8 +1064,8 @@ function PhoneContent() {
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(NavigationBar, {
                         currentUrl: searchParams.get("url")
                     }, void 0, false, {
-                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                        lineNumber: 350,
+                        fileName: "[project]/app/poster/SpotifyContent.tsx",
+                        lineNumber: 358,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -970,13 +1074,13 @@ function PhoneContent() {
                             className: "text-3xl font-bold text-center text-gray-900",
                             children: "Card.Catpng.net"
                         }, void 0, false, {
-                            fileName: "[project]/app/phone/PhoneContent.tsx",
-                            lineNumber: 353,
+                            fileName: "[project]/app/poster/SpotifyContent.tsx",
+                            lineNumber: 361,
                             columnNumber: 13
                         }, this)
                     }, void 0, false, {
-                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                        lineNumber: 352,
+                        fileName: "[project]/app/poster/SpotifyContent.tsx",
+                        lineNumber: 360,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -984,405 +1088,426 @@ function PhoneContent() {
                         children: [
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                 className: "lg:col-span-2 bg-white rounded-lg shadow-lg p-6",
-                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                    className: "relative",
-                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("canvas", {
-                                        ref: canvasRef,
-                                        width: 1000,
-                                        height: 1500,
-                                        className: "w-full h-auto"
-                                    }, void 0, false, {
-                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                        lineNumber: 362,
-                                        columnNumber: 17
-                                    }, this)
-                                }, void 0, false, {
-                                    fileName: "[project]/app/phone/PhoneContent.tsx",
-                                    lineNumber: 361,
-                                    columnNumber: 15
-                                }, this)
-                            }, void 0, false, {
-                                fileName: "[project]/app/phone/PhoneContent.tsx",
-                                lineNumber: 360,
-                                columnNumber: 13
-                            }, this),
-                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                className: "space-y-6 bg-white rounded-lg shadow-lg p-6",
                                 children: [
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                        className: "space-y-4",
+                                        className: "relative",
                                         children: [
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h2", {
-                                                className: "text-lg font-semibold",
-                                                children: "基本信息"
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("canvas", {
+                                                ref: canvasRef,
+                                                width: 1140,
+                                                height: 1740,
+                                                className: "w-full h-auto"
                                             }, void 0, false, {
-                                                fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                lineNumber: 375,
+                                                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                lineNumber: 370,
                                                 columnNumber: 17
                                             }, this),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                children: [
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                                        className: "block text-sm font-medium text-gray-700",
-                                                        children: "歌曲标题"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 379,
-                                                        columnNumber: 19
-                                                    }, this),
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
-                                                        type: "text",
-                                                        value: musicInfo.title,
-                                                        onChange: (e)=>handleTextEdit("title", e.target.value),
-                                                        className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 382,
-                                                        columnNumber: 19
-                                                    }, this)
-                                                ]
-                                            }, void 0, true, {
-                                                fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                lineNumber: 378,
-                                                columnNumber: 17
-                                            }, this),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                children: [
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                                        className: "block text-sm font-medium text-gray-700",
-                                                        children: "艺术家"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 392,
-                                                        columnNumber: 19
-                                                    }, this),
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
-                                                        type: "text",
-                                                        value: musicInfo.artist,
-                                                        onChange: (e)=>handleTextEdit("artist", e.target.value),
-                                                        className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 395,
-                                                        columnNumber: 19
-                                                    }, this)
-                                                ]
-                                            }, void 0, true, {
-                                                fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                lineNumber: 391,
-                                                columnNumber: 17
-                                            }, this),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                children: [
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                                        className: "block text-sm font-medium text-gray-700",
-                                                        children: "歌词"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 405,
-                                                        columnNumber: 19
-                                                    }, this),
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("textarea", {
-                                                        value: musicInfo.lyrics,
-                                                        onChange: (e)=>handleTextEdit("lyrics", e.target.value),
-                                                        rows: 3,
-                                                        className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 408,
-                                                        columnNumber: 19
-                                                    }, this)
-                                                ]
-                                            }, void 0, true, {
-                                                fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                lineNumber: 404,
-                                                columnNumber: 17
-                                            }, this),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                children: [
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                                        className: "block text-sm font-medium text-gray-700",
-                                                        children: "实际时长 (mm:ss)"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 418,
-                                                        columnNumber: 19
-                                                    }, this),
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
-                                                        type: "text",
-                                                        value: formatDuration(musicInfo.duration),
-                                                        onChange: (e)=>handleDurationEdit(e.target.value),
-                                                        placeholder: "0:00",
-                                                        pattern: "[0-9]+:[0-5][0-9]",
-                                                        className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 421,
-                                                        columnNumber: 19
-                                                    }, this)
-                                                ]
-                                            }, void 0, true, {
-                                                fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                lineNumber: 417,
-                                                columnNumber: 17
-                                            }, this),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                children: [
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                                        className: "block text-sm font-medium text-gray-700",
-                                                        children: "播放时长 (mm:ss)"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 433,
-                                                        columnNumber: 19
-                                                    }, this),
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
-                                                        type: "text",
-                                                        value: formatDuration(musicInfo.playDuration || Math.floor(musicInfo.duration / 3)),
-                                                        onChange: (e)=>{
-                                                            const [minutes, seconds] = e.target.value.split(":").map(Number);
-                                                            if (!isNaN(minutes) && !isNaN(seconds)) {
-                                                                handleTextEdit("playDuration", minutes * 60 + seconds);
-                                                            }
-                                                        },
-                                                        placeholder: "0:00",
-                                                        pattern: "[0-9]+:[0-5][0-9]",
-                                                        className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 436,
-                                                        columnNumber: 19
-                                                    }, this)
-                                                ]
-                                            }, void 0, true, {
-                                                fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                lineNumber: 432,
-                                                columnNumber: 17
-                                            }, this),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                children: [
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                                        className: "block text-sm font-medium text-gray-700",
-                                                        children: "封面图片"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 458,
-                                                        columnNumber: 19
-                                                    }, this),
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
-                                                        type: "file",
-                                                        accept: "image/*",
-                                                        onChange: handleCoverUpload,
-                                                        className: "mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 461,
-                                                        columnNumber: 19
-                                                    }, this)
-                                                ]
-                                            }, void 0, true, {
-                                                fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                lineNumber: 457,
-                                                columnNumber: 17
+                                            isEditing && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                className: "edit-overlay",
+                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                    className: "edit-panel",
+                                                    children: [
+                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
+                                                            className: "text-lg font-medium mb-4",
+                                                            children: "编辑音乐信息"
+                                                        }, void 0, false, {
+                                                            fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                            lineNumber: 379,
+                                                            columnNumber: 23
+                                                        }, this),
+                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                            className: "space-y-4",
+                                                            children: [
+                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
+                                                                    type: "text",
+                                                                    value: musicInfo.title,
+                                                                    onChange: (e)=>handleTextEdit("title", e.target.value),
+                                                                    className: "input-field",
+                                                                    placeholder: "歌曲"
+                                                                }, void 0, false, {
+                                                                    fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                                    lineNumber: 381,
+                                                                    columnNumber: 25
+                                                                }, this),
+                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
+                                                                    type: "text",
+                                                                    value: musicInfo.artist,
+                                                                    onChange: (e)=>handleTextEdit("artist", e.target.value),
+                                                                    className: "input-field",
+                                                                    placeholder: "歌手"
+                                                                }, void 0, false, {
+                                                                    fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                                    lineNumber: 390,
+                                                                    columnNumber: 25
+                                                                }, this),
+                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("textarea", {
+                                                                    value: musicInfo.lyrics,
+                                                                    onChange: (e)=>handleTextEdit("lyrics", e.target.value),
+                                                                    className: "input-field",
+                                                                    rows: 4,
+                                                                    placeholder: "歌词"
+                                                                }, void 0, false, {
+                                                                    fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                                    lineNumber: 399,
+                                                                    columnNumber: 25
+                                                                }, this),
+                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                    children: [
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
+                                                                            className: "block text-sm font-medium text-gray-700 mb-2",
+                                                                            children: "时长（秒）"
+                                                                        }, void 0, false, {
+                                                                            fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                                            lineNumber: 409,
+                                                                            columnNumber: 27
+                                                                        }, this),
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
+                                                                            type: "number",
+                                                                            value: musicInfo.duration,
+                                                                            onChange: (e)=>handleTextEdit("duration", Number(e.target.value)),
+                                                                            className: "input-field",
+                                                                            placeholder: "歌曲时长（秒）",
+                                                                            min: "0"
+                                                                        }, void 0, false, {
+                                                                            fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                                            lineNumber: 412,
+                                                                            columnNumber: 27
+                                                                        }, this)
+                                                                    ]
+                                                                }, void 0, true, {
+                                                                    fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                                    lineNumber: 408,
+                                                                    columnNumber: 25
+                                                                }, this),
+                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                    children: [
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
+                                                                            className: "block text-sm font-medium text-gray-700 mb-2",
+                                                                            children: "更换封面"
+                                                                        }, void 0, false, {
+                                                                            fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                                            lineNumber: 424,
+                                                                            columnNumber: 27
+                                                                        }, this),
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
+                                                                            type: "file",
+                                                                            accept: "image/*",
+                                                                            onChange: handleCoverUpload,
+                                                                            className: "file-input"
+                                                                        }, void 0, false, {
+                                                                            fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                                            lineNumber: 427,
+                                                                            columnNumber: 27
+                                                                        }, this)
+                                                                    ]
+                                                                }, void 0, true, {
+                                                                    fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                                    lineNumber: 423,
+                                                                    columnNumber: 25
+                                                                }, this),
+                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                    className: "flex justify-end space-x-2",
+                                                                    children: [
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                                                            onClick: ()=>setIsEditing(false),
+                                                                            className: "btn btn-secondary",
+                                                                            children: "取消"
+                                                                        }, void 0, false, {
+                                                                            fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                                            lineNumber: 435,
+                                                                            columnNumber: 27
+                                                                        }, this),
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                                                            onClick: ()=>setIsEditing(false),
+                                                                            className: "btn btn-primary",
+                                                                            children: "确定"
+                                                                        }, void 0, false, {
+                                                                            fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                                            lineNumber: 441,
+                                                                            columnNumber: 27
+                                                                        }, this)
+                                                                    ]
+                                                                }, void 0, true, {
+                                                                    fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                                    lineNumber: 434,
+                                                                    columnNumber: 25
+                                                                }, this)
+                                                            ]
+                                                        }, void 0, true, {
+                                                            fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                            lineNumber: 380,
+                                                            columnNumber: 23
+                                                        }, this)
+                                                    ]
+                                                }, void 0, true, {
+                                                    fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                    lineNumber: 378,
+                                                    columnNumber: 21
+                                                }, this)
+                                            }, void 0, false, {
+                                                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                lineNumber: 377,
+                                                columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true, {
-                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                        lineNumber: 374,
+                                        fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                        lineNumber: 369,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                        className: "space-y-4",
+                                        className: "mt-4 flex justify-between",
                                         children: [
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h2", {
-                                                className: "text-lg font-semibold",
-                                                children: "背景设置"
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                                onClick: ()=>setIsEditing(true),
+                                                className: "btn btn-primary",
+                                                children: "编辑内容"
                                             }, void 0, false, {
-                                                fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                lineNumber: 472,
+                                                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                lineNumber: 454,
                                                 columnNumber: 17
                                             }, this),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                children: [
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                                        className: "block text-sm font-medium text-gray-700",
-                                                        children: "背景图片"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 476,
-                                                        columnNumber: 19
-                                                    }, this),
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
-                                                        type: "file",
-                                                        accept: "image/*",
-                                                        onChange: handleBackgroundUpload,
-                                                        className: "mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 479,
-                                                        columnNumber: 19
-                                                    }, this)
-                                                ]
-                                            }, void 0, true, {
-                                                fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                lineNumber: 475,
-                                                columnNumber: 17
-                                            }, this),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                children: [
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                                        className: "block text-sm font-medium text-gray-700",
-                                                        children: "模糊程度"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 489,
-                                                        columnNumber: 19
-                                                    }, this),
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
-                                                        type: "range",
-                                                        min: "0",
-                                                        max: "20",
-                                                        step: "1",
-                                                        value: backgroundConfig.blur,
-                                                        onChange: (e)=>handleBackgroundConfigUpdate("blur", Number(e.target.value)),
-                                                        className: "mt-1 block w-full"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 492,
-                                                        columnNumber: 19
-                                                    }, this),
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                        className: "mt-1 text-sm text-gray-500 text-right",
-                                                        children: [
-                                                            backgroundConfig.blur,
-                                                            "px"
-                                                        ]
-                                                    }, void 0, true, {
-                                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 506,
-                                                        columnNumber: 19
-                                                    }, this)
-                                                ]
-                                            }, void 0, true, {
-                                                fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                lineNumber: 488,
-                                                columnNumber: 17
-                                            }, this),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                children: [
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                                        className: "block text-sm font-medium text-gray-700",
-                                                        children: "不透明度"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 513,
-                                                        columnNumber: 19
-                                                    }, this),
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
-                                                        type: "range",
-                                                        min: "0",
-                                                        max: "1",
-                                                        step: "0.1",
-                                                        value: backgroundConfig.opacity,
-                                                        onChange: (e)=>handleBackgroundConfigUpdate("opacity", Number(e.target.value)),
-                                                        className: "mt-1 block w-full"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 516,
-                                                        columnNumber: 19
-                                                    }, this),
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                        className: "mt-1 text-sm text-gray-500 text-right",
-                                                        children: [
-                                                            Math.round((backgroundConfig.opacity ?? 1) * 100),
-                                                            "%"
-                                                        ]
-                                                    }, void 0, true, {
-                                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 530,
-                                                        columnNumber: 19
-                                                    }, this)
-                                                ]
-                                            }, void 0, true, {
-                                                fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                lineNumber: 512,
-                                                columnNumber: 17
-                                            }, this),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                className: "flex items-center justify-between",
-                                                children: [
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                        className: "text-sm font-medium text-gray-700",
-                                                        children: "渐变背景"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 537,
-                                                        columnNumber: 19
-                                                    }, this),
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                                        className: "relative inline-flex items-center cursor-pointer",
-                                                        children: [
-                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
-                                                                type: "checkbox",
-                                                                checked: useGradient,
-                                                                onChange: (e)=>setUseGradient(e.target.checked),
-                                                                className: "sr-only peer"
-                                                            }, void 0, false, {
-                                                                fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                                lineNumber: 541,
-                                                                columnNumber: 21
-                                                            }, this),
-                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                className: "w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"
-                                                            }, void 0, false, {
-                                                                fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                                lineNumber: 547,
-                                                                columnNumber: 21
-                                                            }, this)
-                                                        ]
-                                                    }, void 0, true, {
-                                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 540,
-                                                        columnNumber: 19
-                                                    }, this)
-                                                ]
-                                            }, void 0, true, {
-                                                fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                lineNumber: 536,
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                                onClick: handleSavePoster,
+                                                className: "btn btn-secondary",
+                                                disabled: isSaving,
+                                                children: isSaving ? "保存中..." : "下载"
+                                            }, void 0, false, {
+                                                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                lineNumber: 460,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
-                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                        lineNumber: 471,
-                                        columnNumber: 15
-                                    }, this),
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
-                                        onClick: handleSavePoster,
-                                        disabled: isSaving,
-                                        className: "w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400",
-                                        children: isSaving ? "保存中..." : "保存海报"
-                                    }, void 0, false, {
-                                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                                        lineNumber: 553,
+                                        fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                        lineNumber: 453,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
-                                fileName: "[project]/app/phone/PhoneContent.tsx",
-                                lineNumber: 372,
+                                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                lineNumber: 368,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                className: "space-y-6",
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                        className: "bg-white rounded-lg shadow-lg p-6",
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h2", {
+                                                className: "text-xl font-semibold mb-4",
+                                                children: "选择主题"
+                                            }, void 0, false, {
+                                                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                lineNumber: 474,
+                                                columnNumber: 17
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                className: "grid grid-cols-3 gap-4",
+                                                children: __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$themes$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["themes"].map((theme)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                                        onClick: ()=>setSelectedTheme(theme),
+                                                        className: `relative aspect-square rounded-lg border-2 p-2 hover:border-indigo-500 ${selectedTheme.id === theme.id ? "border-indigo-500" : "border-gray-200"}`,
+                                                        style: {
+                                                            background: theme.backgroundType === "image" ? `url(${theme.background}) center/cover` : theme.background
+                                                        },
+                                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                            className: "block text-sm font-medium text-center",
+                                                            style: {
+                                                                color: theme.text
+                                                            },
+                                                            children: theme.name
+                                                        }, void 0, false, {
+                                                            fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                            lineNumber: 492,
+                                                            columnNumber: 23
+                                                        }, this)
+                                                    }, theme.id, false, {
+                                                        fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                        lineNumber: 477,
+                                                        columnNumber: 21
+                                                    }, this))
+                                            }, void 0, false, {
+                                                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                lineNumber: 475,
+                                                columnNumber: 17
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                        lineNumber: 473,
+                                        columnNumber: 15
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                        className: "bg-white rounded-lg shadow-lg p-6",
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h2", {
+                                                className: "text-xl font-semibold mb-4",
+                                                children: "元素编辑"
+                                            }, void 0, false, {
+                                                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                lineNumber: 505,
+                                                columnNumber: 17
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                className: "space-y-4",
+                                                children: Object.entries(posterConfig).map(([key, config])=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                        className: "space-y-2",
+                                                        children: [
+                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                className: "flex items-center justify-between",
+                                                                children: [
+                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
+                                                                        className: "text-sm font-medium text-gray-700 capitalize",
+                                                                        children: key
+                                                                    }, void 0, false, {
+                                                                        fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                                        lineNumber: 510,
+                                                                        columnNumber: 25
+                                                                    }, this),
+                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
+                                                                        type: "checkbox",
+                                                                        checked: config.visible,
+                                                                        onChange: (e)=>updateElementConfig(key, "visible", e.target.checked),
+                                                                        className: "rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                                                    }, void 0, false, {
+                                                                        fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                                        lineNumber: 513,
+                                                                        columnNumber: 25
+                                                                    }, this)
+                                                                ]
+                                                            }, void 0, true, {
+                                                                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                                lineNumber: 509,
+                                                                columnNumber: 23
+                                                            }, this),
+                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                className: "grid grid-cols-2 gap-4",
+                                                                children: [
+                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                        children: [
+                                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
+                                                                                className: "block text-sm text-gray-500",
+                                                                                children: "位置 X"
+                                                                            }, void 0, false, {
+                                                                                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                                                lineNumber: 528,
+                                                                                columnNumber: 27
+                                                                            }, this),
+                                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
+                                                                                type: "range",
+                                                                                min: "0",
+                                                                                max: "100",
+                                                                                value: config.x * 100,
+                                                                                onChange: (e)=>updateElementConfig(key, "x", Number(e.target.value) / 100),
+                                                                                className: "w-full"
+                                                                            }, void 0, false, {
+                                                                                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                                                lineNumber: 531,
+                                                                                columnNumber: 27
+                                                                            }, this)
+                                                                        ]
+                                                                    }, void 0, true, {
+                                                                        fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                                        lineNumber: 527,
+                                                                        columnNumber: 25
+                                                                    }, this),
+                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                        children: [
+                                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
+                                                                                className: "block text-sm text-gray-500",
+                                                                                children: "位置 Y"
+                                                                            }, void 0, false, {
+                                                                                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                                                lineNumber: 547,
+                                                                                columnNumber: 27
+                                                                            }, this),
+                                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
+                                                                                type: "range",
+                                                                                min: "0",
+                                                                                max: "100",
+                                                                                value: config.y * 100,
+                                                                                onChange: (e)=>updateElementConfig(key, "y", Number(e.target.value) / 100),
+                                                                                className: "w-full"
+                                                                            }, void 0, false, {
+                                                                                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                                                lineNumber: 550,
+                                                                                columnNumber: 27
+                                                                            }, this)
+                                                                        ]
+                                                                    }, void 0, true, {
+                                                                        fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                                        lineNumber: 546,
+                                                                        columnNumber: 25
+                                                                    }, this),
+                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                        className: "col-span-2",
+                                                                        children: [
+                                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
+                                                                                className: "block text-sm text-gray-500",
+                                                                                children: "缩放"
+                                                                            }, void 0, false, {
+                                                                                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                                                lineNumber: 566,
+                                                                                columnNumber: 27
+                                                                            }, this),
+                                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
+                                                                                type: "range",
+                                                                                min: "50",
+                                                                                max: "150",
+                                                                                value: config.scale * 100,
+                                                                                onChange: (e)=>updateElementConfig(key, "scale", Number(e.target.value) / 100),
+                                                                                className: "w-full"
+                                                                            }, void 0, false, {
+                                                                                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                                                lineNumber: 569,
+                                                                                columnNumber: 27
+                                                                            }, this)
+                                                                        ]
+                                                                    }, void 0, true, {
+                                                                        fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                                        lineNumber: 565,
+                                                                        columnNumber: 25
+                                                                    }, this)
+                                                                ]
+                                                            }, void 0, true, {
+                                                                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                                lineNumber: 526,
+                                                                columnNumber: 23
+                                                            }, this)
+                                                        ]
+                                                    }, key, true, {
+                                                        fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                        lineNumber: 508,
+                                                        columnNumber: 21
+                                                    }, this))
+                                            }, void 0, false, {
+                                                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                                lineNumber: 506,
+                                                columnNumber: 17
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                        lineNumber: 504,
+                                        columnNumber: 15
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                lineNumber: 471,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
-                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                        lineNumber: 358,
+                        fileName: "[project]/app/poster/SpotifyContent.tsx",
+                        lineNumber: 366,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
-                fileName: "[project]/app/phone/PhoneContent.tsx",
-                lineNumber: 348,
+                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                lineNumber: 356,
                 columnNumber: 9
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1394,26 +1519,26 @@ function PhoneContent() {
                         className: "text-indigo-600 hover:text-indigo-800",
                         children: "aidaoxx@gmail.com"
                     }, void 0, false, {
-                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                        lineNumber: 566,
+                        fileName: "[project]/app/poster/SpotifyContent.tsx",
+                        lineNumber: 595,
                         columnNumber: 9
                     }, this),
                     "，谢谢"
                 ]
             }, void 0, true, {
-                fileName: "[project]/app/phone/PhoneContent.tsx",
-                lineNumber: 564,
+                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                lineNumber: 593,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
-        fileName: "[project]/app/phone/PhoneContent.tsx",
-        lineNumber: 338,
+        fileName: "[project]/app/poster/SpotifyContent.tsx",
+        lineNumber: 346,
         columnNumber: 5
     }, this);
 }
 }}),
-"[project]/app/phone/page.tsx [app-rsc] (ecmascript, Next.js server component, client modules ssr)": ((__turbopack_context__) => {
+"[project]/app/poster/page.tsx [app-rsc] (ecmascript, Next.js server component, client modules ssr)": ((__turbopack_context__) => {
 
 var { r: __turbopack_require__, f: __turbopack_module_context__, i: __turbopack_import__, s: __turbopack_esm__, v: __turbopack_export_value__, n: __turbopack_export_namespace__, c: __turbopack_cache__, M: __turbopack_modules__, l: __turbopack_load__, j: __turbopack_dynamic__, P: __turbopack_resolve_absolute_path__, U: __turbopack_relative_url__, R: __turbopack_resolve_module_id_path__, b: __turbopack_worker_blob_url__, g: global, __dirname, t: __turbopack_require_real__ } = __turbopack_context__;
 {
@@ -3957,4 +4082,4 @@ if ((typeof exports.default === 'function' || typeof exports.default === 'object
 
 };
 
-//# sourceMappingURL=_7eca0e._.js.map
+//# sourceMappingURL=_a4fa90._.js.map
