@@ -228,7 +228,7 @@ export default function Home() {
                   <span className="material-symbols-outlined">close</span>
                 </button>
               </div>
-              
+
               {/* 收藏列表内容 */}
               <div className="p-6 overflow-y-auto max-h-[60vh]">
                 {isLoadingFavorites ? (

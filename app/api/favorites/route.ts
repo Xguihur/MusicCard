@@ -11,7 +11,7 @@ export async function GET() {
         createdAt: "desc",
       },
     });
-    
+
     return NextResponse.json({ favorites });
   } catch (error) {
     console.error("获取收藏列表失败:", error);
