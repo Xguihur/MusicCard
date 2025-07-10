@@ -41,6 +41,7 @@ function LoadingOverlay({ message }: { message: string }) {
 // 导航栏组件
 function NavigationBar({ currentUrl }: { currentUrl: string | null }) {
   const { isCopied, copyToClipboard } = useCopyToClipboard();
+  const [isFavorited, setIsFavorited] = useState(false);
 
   const handleCopyUrl = async () => {
     const success = await copyToClipboard(window.location.href);
@@ -48,6 +49,10 @@ function NavigationBar({ currentUrl }: { currentUrl: string | null }) {
       // 复制失败时的提示
       console.error('复制失败，请手动复制链接');
     }
+  };
+
+  const handleFavoriteClick = () => {
+    setIsFavorited(!isFavorited);
   };
 
   return (
@@ -71,6 +76,26 @@ function NavigationBar({ currentUrl }: { currentUrl: string | null }) {
         >
           Phone
         </Link>
+        <button 
+          className={`px-4 py-2 rounded-md shadow hover:shadow-md transition-all duration-200 flex items-center ${
+            isFavorited
+              ? 'bg-yellow-500 text-white'
+              : 'bg-white text-gray-600 hover:text-gray-900'
+          }`}
+          onClick={handleFavoriteClick}
+        >
+          <span 
+            className={`material-symbols-outlined mr-1 text-sm ${
+              isFavorited ? 'font-bold' : ''
+            }`}
+            style={{ 
+              fontVariationSettings: isFavorited ? '"FILL" 1' : '"FILL" 0'
+            }}
+          >
+            star
+          </span>
+          收藏
+        </button>
         <button 
           className={`px-4 py-2 rounded-md shadow hover:shadow-md transition-all duration-200 flex items-center ${
             isCopied 

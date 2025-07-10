@@ -701,12 +701,16 @@ _c = LoadingOverlay;
 function NavigationBar({ currentUrl }) {
     _s();
     const { isCopied, copyToClipboard } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$hooks$2f$useCopyToClipboard$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCopyToClipboard"])();
+    const [isFavorited, setIsFavorited] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     const handleCopyUrl = async ()=>{
         const success = await copyToClipboard(window.location.href);
         if (!success) {
             // 复制失败时的提示
             console.error('复制失败，请手动复制链接');
         }
+    };
+    const handleFavoriteClick = ()=>{
+        setIsFavorited(!isFavorited);
     };
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
         className: "flex items-center justify-between mb-8",
@@ -722,19 +726,19 @@ function NavigationBar({ currentUrl }) {
                             children: "home"
                         }, void 0, false, {
                             fileName: "[project]/app/poster/SpotifyContent.tsx",
-                            lineNumber: 60,
+                            lineNumber: 65,
                             columnNumber: 11
                         }, this),
                         "返回首页"
                     ]
                 }, void 0, true, {
                     fileName: "[project]/app/poster/SpotifyContent.tsx",
-                    lineNumber: 56,
+                    lineNumber: 61,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/app/poster/SpotifyContent.tsx",
-                lineNumber: 55,
+                lineNumber: 60,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -745,7 +749,7 @@ function NavigationBar({ currentUrl }) {
                         children: "切换模板："
                     }, void 0, false, {
                         fileName: "[project]/app/poster/SpotifyContent.tsx",
-                        lineNumber: 65,
+                        lineNumber: 70,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
@@ -754,7 +758,29 @@ function NavigationBar({ currentUrl }) {
                         children: "Phone"
                     }, void 0, false, {
                         fileName: "[project]/app/poster/SpotifyContent.tsx",
-                        lineNumber: 66,
+                        lineNumber: 71,
+                        columnNumber: 9
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                        className: `px-4 py-2 rounded-md shadow hover:shadow-md transition-all duration-200 flex items-center ${isFavorited ? 'bg-yellow-500 text-white' : 'bg-white text-gray-600 hover:text-gray-900'}`,
+                        onClick: handleFavoriteClick,
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                className: `material-symbols-outlined mr-1 text-sm ${isFavorited ? 'font-bold' : ''}`,
+                                style: {
+                                    fontVariationSettings: isFavorited ? '"FILL" 1' : '"FILL" 0'
+                                },
+                                children: "star"
+                            }, void 0, false, {
+                                fileName: "[project]/app/poster/SpotifyContent.tsx",
+                                lineNumber: 87,
+                                columnNumber: 11
+                            }, this),
+                            "收藏"
+                        ]
+                    }, void 0, true, {
+                        fileName: "[project]/app/poster/SpotifyContent.tsx",
+                        lineNumber: 79,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -767,7 +793,7 @@ function NavigationBar({ currentUrl }) {
                                     children: "check"
                                 }, void 0, false, {
                                     fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                    lineNumber: 84,
+                                    lineNumber: 109,
                                     columnNumber: 15
                                 }, this),
                                 "已复制"
@@ -779,7 +805,7 @@ function NavigationBar({ currentUrl }) {
                                     children: "content_copy"
                                 }, void 0, false, {
                                     fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                    lineNumber: 89,
+                                    lineNumber: 114,
                                     columnNumber: 15
                                 }, this),
                                 "复制链接"
@@ -787,23 +813,23 @@ function NavigationBar({ currentUrl }) {
                         }, void 0, true)
                     }, void 0, false, {
                         fileName: "[project]/app/poster/SpotifyContent.tsx",
-                        lineNumber: 74,
+                        lineNumber: 99,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/app/poster/SpotifyContent.tsx",
-                lineNumber: 64,
+                lineNumber: 69,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/app/poster/SpotifyContent.tsx",
-        lineNumber: 54,
+        lineNumber: 59,
         columnNumber: 5
     }, this);
 }
-_s(NavigationBar, "2/Xp5dvGgc3DE1LEd1QNvpbEkfY=", false, function() {
+_s(NavigationBar, "fAzc89B4Bfe2BnFfgamWRrazcuI=", false, function() {
     return [
         __TURBOPACK__imported__module__$5b$project$5d2f$hooks$2f$useCopyToClipboard$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCopyToClipboard"]
     ];
@@ -1079,14 +1105,14 @@ function PosterContent() {
                 message: "正在获取音乐信息..."
             }, void 0, false, {
                 fileName: "[project]/app/poster/SpotifyContent.tsx",
-                lineNumber: 348,
+                lineNumber: 373,
                 columnNumber: 21
             }, this),
             isSaving && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(LoadingOverlay, {
                 message: "正在生成海报..."
             }, void 0, false, {
                 fileName: "[project]/app/poster/SpotifyContent.tsx",
-                lineNumber: 349,
+                lineNumber: 374,
                 columnNumber: 20
             }, this),
             error ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1096,12 +1122,12 @@ function PosterContent() {
                     children: error
                 }, void 0, false, {
                     fileName: "[project]/app/poster/SpotifyContent.tsx",
-                    lineNumber: 353,
+                    lineNumber: 378,
                     columnNumber: 11
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/app/poster/SpotifyContent.tsx",
-                lineNumber: 352,
+                lineNumber: 377,
                 columnNumber: 9
             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                 className: "max-w-6xl mx-auto",
@@ -1110,7 +1136,7 @@ function PosterContent() {
                         currentUrl: searchParams.get("url")
                     }, void 0, false, {
                         fileName: "[project]/app/poster/SpotifyContent.tsx",
-                        lineNumber: 358,
+                        lineNumber: 383,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1120,12 +1146,12 @@ function PosterContent() {
                             children: "Card.Catpng.net"
                         }, void 0, false, {
                             fileName: "[project]/app/poster/SpotifyContent.tsx",
-                            lineNumber: 361,
+                            lineNumber: 386,
                             columnNumber: 13
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/app/poster/SpotifyContent.tsx",
-                        lineNumber: 360,
+                        lineNumber: 385,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1144,7 +1170,7 @@ function PosterContent() {
                                                 className: "w-full h-auto"
                                             }, void 0, false, {
                                                 fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                lineNumber: 370,
+                                                lineNumber: 395,
                                                 columnNumber: 17
                                             }, this),
                                             isEditing && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1157,7 +1183,7 @@ function PosterContent() {
                                                             children: "编辑音乐信息"
                                                         }, void 0, false, {
                                                             fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                            lineNumber: 379,
+                                                            lineNumber: 404,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1171,7 +1197,7 @@ function PosterContent() {
                                                                     placeholder: "歌曲"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                                    lineNumber: 381,
+                                                                    lineNumber: 406,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -1182,7 +1208,7 @@ function PosterContent() {
                                                                     placeholder: "歌手"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                                    lineNumber: 390,
+                                                                    lineNumber: 415,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("textarea", {
@@ -1193,7 +1219,7 @@ function PosterContent() {
                                                                     placeholder: "歌词"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                                    lineNumber: 399,
+                                                                    lineNumber: 424,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1203,7 +1229,7 @@ function PosterContent() {
                                                                             children: "时长（秒）"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                                            lineNumber: 409,
+                                                                            lineNumber: 434,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -1215,13 +1241,13 @@ function PosterContent() {
                                                                             min: "0"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                                            lineNumber: 412,
+                                                                            lineNumber: 437,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                                    lineNumber: 408,
+                                                                    lineNumber: 433,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1231,7 +1257,7 @@ function PosterContent() {
                                                                             children: "更换封面"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                                            lineNumber: 424,
+                                                                            lineNumber: 449,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -1241,13 +1267,13 @@ function PosterContent() {
                                                                             className: "file-input"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                                            lineNumber: 427,
+                                                                            lineNumber: 452,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                                    lineNumber: 423,
+                                                                    lineNumber: 448,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1259,7 +1285,7 @@ function PosterContent() {
                                                                             children: "取消"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                                            lineNumber: 435,
+                                                                            lineNumber: 460,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -1268,36 +1294,36 @@ function PosterContent() {
                                                                             children: "确定"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                                            lineNumber: 441,
+                                                                            lineNumber: 466,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                                    lineNumber: 434,
+                                                                    lineNumber: 459,
                                                                     columnNumber: 25
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                            lineNumber: 380,
+                                                            lineNumber: 405,
                                                             columnNumber: 23
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                    lineNumber: 378,
+                                                    lineNumber: 403,
                                                     columnNumber: 21
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                lineNumber: 377,
+                                                lineNumber: 402,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                        lineNumber: 369,
+                                        lineNumber: 394,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1309,7 +1335,7 @@ function PosterContent() {
                                                 children: "编辑内容"
                                             }, void 0, false, {
                                                 fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                lineNumber: 454,
+                                                lineNumber: 479,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -1319,19 +1345,19 @@ function PosterContent() {
                                                 children: isSaving ? "保存中..." : "下载"
                                             }, void 0, false, {
                                                 fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                lineNumber: 460,
+                                                lineNumber: 485,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                        lineNumber: 453,
+                                        lineNumber: 478,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                lineNumber: 368,
+                                lineNumber: 393,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1345,7 +1371,7 @@ function PosterContent() {
                                                 children: "选择主题"
                                             }, void 0, false, {
                                                 fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                lineNumber: 474,
+                                                lineNumber: 499,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1364,23 +1390,23 @@ function PosterContent() {
                                                             children: theme.name
                                                         }, void 0, false, {
                                                             fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                            lineNumber: 492,
+                                                            lineNumber: 517,
                                                             columnNumber: 23
                                                         }, this)
                                                     }, theme.id, false, {
                                                         fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                        lineNumber: 477,
+                                                        lineNumber: 502,
                                                         columnNumber: 21
                                                     }, this))
                                             }, void 0, false, {
                                                 fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                lineNumber: 475,
+                                                lineNumber: 500,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                        lineNumber: 473,
+                                        lineNumber: 498,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1391,7 +1417,7 @@ function PosterContent() {
                                                 children: "元素编辑"
                                             }, void 0, false, {
                                                 fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                lineNumber: 505,
+                                                lineNumber: 530,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1407,7 +1433,7 @@ function PosterContent() {
                                                                         children: key
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                                        lineNumber: 510,
+                                                                        lineNumber: 535,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -1417,13 +1443,13 @@ function PosterContent() {
                                                                         className: "rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                                        lineNumber: 513,
+                                                                        lineNumber: 538,
                                                                         columnNumber: 25
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                                lineNumber: 509,
+                                                                lineNumber: 534,
                                                                 columnNumber: 23
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1436,7 +1462,7 @@ function PosterContent() {
                                                                                 children: "位置 X"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                                                lineNumber: 528,
+                                                                                lineNumber: 553,
                                                                                 columnNumber: 27
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -1448,13 +1474,13 @@ function PosterContent() {
                                                                                 className: "w-full"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                                                lineNumber: 531,
+                                                                                lineNumber: 556,
                                                                                 columnNumber: 27
                                                                             }, this)
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                                        lineNumber: 527,
+                                                                        lineNumber: 552,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1464,7 +1490,7 @@ function PosterContent() {
                                                                                 children: "位置 Y"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                                                lineNumber: 547,
+                                                                                lineNumber: 572,
                                                                                 columnNumber: 27
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -1476,13 +1502,13 @@ function PosterContent() {
                                                                                 className: "w-full"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                                                lineNumber: 550,
+                                                                                lineNumber: 575,
                                                                                 columnNumber: 27
                                                                             }, this)
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                                        lineNumber: 546,
+                                                                        lineNumber: 571,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1493,7 +1519,7 @@ function PosterContent() {
                                                                                 children: "缩放"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                                                lineNumber: 566,
+                                                                                lineNumber: 591,
                                                                                 columnNumber: 27
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -1505,54 +1531,54 @@ function PosterContent() {
                                                                                 className: "w-full"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                                                lineNumber: 569,
+                                                                                lineNumber: 594,
                                                                                 columnNumber: 27
                                                                             }, this)
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                                        lineNumber: 565,
+                                                                        lineNumber: 590,
                                                                         columnNumber: 25
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                                lineNumber: 526,
+                                                                lineNumber: 551,
                                                                 columnNumber: 23
                                                             }, this)
                                                         ]
                                                     }, key, true, {
                                                         fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                        lineNumber: 508,
+                                                        lineNumber: 533,
                                                         columnNumber: 21
                                                     }, this))
                                             }, void 0, false, {
                                                 fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                                lineNumber: 506,
+                                                lineNumber: 531,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                        lineNumber: 504,
+                                        lineNumber: 529,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/app/poster/SpotifyContent.tsx",
-                                lineNumber: 471,
+                                lineNumber: 496,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/app/poster/SpotifyContent.tsx",
-                        lineNumber: 366,
+                        lineNumber: 391,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/app/poster/SpotifyContent.tsx",
-                lineNumber: 356,
+                lineNumber: 381,
                 columnNumber: 9
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1565,20 +1591,20 @@ function PosterContent() {
                         children: "aidaoxx@gmail.com"
                     }, void 0, false, {
                         fileName: "[project]/app/poster/SpotifyContent.tsx",
-                        lineNumber: 595,
+                        lineNumber: 620,
                         columnNumber: 9
                     }, this),
                     "，谢谢"
                 ]
             }, void 0, true, {
                 fileName: "[project]/app/poster/SpotifyContent.tsx",
-                lineNumber: 593,
+                lineNumber: 618,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/app/poster/SpotifyContent.tsx",
-        lineNumber: 346,
+        lineNumber: 371,
         columnNumber: 5
     }, this);
 }
