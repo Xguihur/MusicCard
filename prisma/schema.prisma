@@ -6,10 +6,22 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../lib/generated/prisma"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Favorite {
+  id          Int      @id @default(autoincrement())
+  url         String   // 原始音乐链接
+  title       String   // 歌曲名称
+  artist      String   // 歌手名称
+  coverUrl    String?  // 封面图片链接
+  duration    Int?     // 歌曲时长（秒）
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("favorites")
 }
