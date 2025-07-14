@@ -1,12 +1,12 @@
 {
   "app": {
-    "[project]/app/poster/page": [
+    "[project]/app/page": [
       "static/media/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7W0Q5nw.p.0faac26c.woff2"
     ],
     "[project]/app/_not-found/page": [
       "static/media/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7W0Q5nw.p.0faac26c.woff2"
     ],
-    "[project]/app/page": [
+    "[project]/app/poster/page": [
       "static/media/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7W0Q5nw.p.0faac26c.woff2"
     ]
   },
