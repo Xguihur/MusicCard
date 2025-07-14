@@ -55,7 +55,7 @@ function NavigationBar({
   useEffect(() => {
     const checkFavoriteStatus = async () => {
       if (!currentUrl) return;
-      
+
       try {
         const response = await fetch(`/api/favorites/check?url=${encodeURIComponent(currentUrl)}`);
         const data = await response.json();
@@ -79,9 +79,9 @@ function NavigationBar({
 
   const handleFavoriteClick = async () => {
     if (isUpdatingFavorite) return;
-    
+
     setIsUpdatingFavorite(true);
-    
+
     try {
       if (isFavorited) {
         // 取消收藏
@@ -89,7 +89,7 @@ function NavigationBar({
           const response = await fetch(`/api/favorites?id=${favoriteId}`, {
             method: 'DELETE',
           });
-          
+
           if (response.ok) {
             setIsFavorited(false);
             setFavoriteId(null);
@@ -104,7 +104,7 @@ function NavigationBar({
           alert("歌曲信息不完整，无法收藏");
           return;
         }
-        
+
         const response = await fetch('/api/favorites', {
           method: 'POST',
           headers: {
@@ -118,7 +118,7 @@ function NavigationBar({
             duration: musicInfo.duration,
           }),
         });
-        
+
         if (response.ok) {
           const data = await response.json();
           setIsFavorited(true);

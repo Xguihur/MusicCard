@@ -673,7 +673,7 @@ function LoadingOverlay({ message }) {
                     className: "inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mb-4"
                 }, void 0, false, {
                     fileName: "[project]/app/phone/PhoneContent.tsx",
-                    lineNumber: 65,
+                    lineNumber: 64,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -681,31 +681,107 @@ function LoadingOverlay({ message }) {
                     children: message
                 }, void 0, false, {
                     fileName: "[project]/app/phone/PhoneContent.tsx",
-                    lineNumber: 66,
+                    lineNumber: 65,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/app/phone/PhoneContent.tsx",
-            lineNumber: 64,
+            lineNumber: 63,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/app/phone/PhoneContent.tsx",
-        lineNumber: 63,
+        lineNumber: 62,
         columnNumber: 5
     }, this);
 }
 _c = LoadingOverlay;
 // 导航栏组件
-function NavigationBar({ currentUrl, onSaveRecord, saving }) {
+function NavigationBar({ currentUrl, musicInfo }) {
     _s();
     const { isCopied, copyToClipboard } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$hooks$2f$useCopyToClipboard$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCopyToClipboard"])();
+    const [isFavorited, setIsFavorited] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
+    const [favoriteId, setFavoriteId] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
+    const [isUpdatingFavorite, setIsUpdatingFavorite] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
+        "NavigationBar.useEffect": ()=>{
+            const checkFavoriteStatus = {
+                "NavigationBar.useEffect.checkFavoriteStatus": async ()=>{
+                    if (!currentUrl) return;
+                    try {
+                        const response = await fetch(`/api/favorites/check?url=${encodeURIComponent(currentUrl)}`);
+                        const data = await response.json();
+                        setIsFavorited(data.isFavorited);
+                        setFavoriteId(data.favoriteId);
+                    } catch (error) {
+                        console.error("检查收藏状态失败:", error);
+                    }
+                }
+            }["NavigationBar.useEffect.checkFavoriteStatus"];
+            checkFavoriteStatus();
+        }
+    }["NavigationBar.useEffect"], [
+        currentUrl
+    ]);
     const handleCopyUrl = async ()=>{
         const success = await copyToClipboard(window.location.href);
         if (!success) {
             // 复制失败时的提示
             console.error('复制失败，请手动复制链接');
+        }
+    };
+    const handleFavoriteClick = async ()=>{
+        if (isUpdatingFavorite) return;
+        setIsUpdatingFavorite(true);
+        try {
+            if (isFavorited) {
+                // 取消收藏
+                if (favoriteId) {
+                    const response = await fetch(`/api/favorites?id=${favoriteId}`, {
+                        method: "DELETE"
+                    });
+                    if (response.ok) {
+                        setIsFavorited(false);
+                        setFavoriteId(null);
+                    } else {
+                        const error = await response.json();
+                        alert(error.error || "取消收藏失败");
+                    }
+                }
+            } else {
+                // 添加收藏
+                if (!currentUrl || !musicInfo.title || !musicInfo.artist) {
+                    alert("歌曲信息不完整，无法收藏");
+                    return;
+                }
+                const response = await fetch("/api/favorites", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        url: currentUrl,
+                        title: musicInfo.title,
+                        artist: musicInfo.artist,
+                        coverUrl: musicInfo.coverUrl,
+                        duration: musicInfo.duration
+                    })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    setIsFavorited(true);
+                    setFavoriteId(data.favorite.id);
+                } else {
+                    const error = await response.json();
+                    alert(error.error || "添加收藏失败");
+                }
+            }
+        } catch (error) {
+            console.error("收藏操作失败:", error);
+            alert("操作失败，请重试");
+        } finally{
+            setIsUpdatingFavorite(false);
         }
     };
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -722,19 +798,19 @@ function NavigationBar({ currentUrl, onSaveRecord, saving }) {
                             children: "home"
                         }, void 0, false, {
                             fileName: "[project]/app/phone/PhoneContent.tsx",
-                            lineNumber: 99,
+                            lineNumber: 164,
                             columnNumber: 11
                         }, this),
                         "返回首页"
                     ]
                 }, void 0, true, {
                     fileName: "[project]/app/phone/PhoneContent.tsx",
-                    lineNumber: 95,
+                    lineNumber: 160,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/app/phone/PhoneContent.tsx",
-                lineNumber: 94,
+                lineNumber: 159,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -745,7 +821,7 @@ function NavigationBar({ currentUrl, onSaveRecord, saving }) {
                         children: "切换模板："
                     }, void 0, false, {
                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                        lineNumber: 104,
+                        lineNumber: 169,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
@@ -754,117 +830,81 @@ function NavigationBar({ currentUrl, onSaveRecord, saving }) {
                         children: "Poster"
                     }, void 0, false, {
                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                        lineNumber: 105,
+                        lineNumber: 170,
+                        columnNumber: 9
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                        className: `px-4 py-2 rounded-md shadow hover:shadow-md transition-all duration-200 flex items-center ${isFavorited ? 'bg-yellow-500 text-white' : 'bg-white text-gray-600 hover:text-gray-900'}`,
+                        onClick: handleFavoriteClick,
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                children: "star"
+                            }, void 0, false, {
+                                fileName: "[project]/app/phone/PhoneContent.tsx",
+                                lineNumber: 186,
+                                columnNumber: 11
+                            }, this),
+                            "收藏"
+                        ]
+                    }, void 0, true, {
+                        fileName: "[project]/app/phone/PhoneContent.tsx",
+                        lineNumber: 178,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/app/phone/PhoneContent.tsx",
-                lineNumber: 103,
+                lineNumber: 168,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                 className: "flex items-center space-x-4",
-                children: [
-                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
-                        href: "/history",
-                        className: "px-4 py-2 bg-white rounded-md shadow hover:shadow-md transition-shadow text-gray-600 hover:text-gray-900 flex items-center",
+                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                    className: `px-4 py-2 rounded-md shadow hover:shadow-md transition-all duration-200 flex items-center ${isCopied ? 'bg-green-500 text-white' : 'bg-white text-gray-600 hover:text-gray-900'}`,
+                    onClick: handleCopyUrl,
+                    children: isCopied ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Fragment"], {
                         children: [
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                 className: "material-symbols-outlined mr-1 text-sm",
-                                children: "history"
+                                children: "check"
                             }, void 0, false, {
                                 fileName: "[project]/app/phone/PhoneContent.tsx",
-                                lineNumber: 119,
-                                columnNumber: 11
+                                lineNumber: 203,
+                                columnNumber: 15
                             }, this),
-                            "历史记录"
+                            "已复制"
                         ]
-                    }, void 0, true, {
-                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                        lineNumber: 115,
-                        columnNumber: 9
-                    }, this),
-                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
-                        onClick: onSaveRecord,
-                        disabled: saving,
-                        className: `px-4 py-2 rounded-md shadow hover:shadow-md transition-all duration-200 flex items-center ${saving ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-600'}`,
-                        children: saving ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Fragment"], {
-                            children: [
-                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                    className: "animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"
-                                }, void 0, false, {
-                                    fileName: "[project]/app/phone/PhoneContent.tsx",
-                                    lineNumber: 133,
-                                    columnNumber: 15
-                                }, this),
-                                "保存中..."
-                            ]
-                        }, void 0, true) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Fragment"], {
-                            children: [
-                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                    className: "material-symbols-outlined mr-1 text-sm",
-                                    children: "save"
-                                }, void 0, false, {
-                                    fileName: "[project]/app/phone/PhoneContent.tsx",
-                                    lineNumber: 138,
-                                    columnNumber: 15
-                                }, this),
-                                "保存记录"
-                            ]
-                        }, void 0, true)
-                    }, void 0, false, {
-                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                        lineNumber: 122,
-                        columnNumber: 9
-                    }, this),
-                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
-                        className: `px-4 py-2 rounded-md shadow hover:shadow-md transition-all duration-200 flex items-center ${isCopied ? 'bg-green-500 text-white' : 'bg-white text-gray-600 hover:text-gray-900'}`,
-                        onClick: handleCopyUrl,
-                        children: isCopied ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Fragment"], {
-                            children: [
-                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                    className: "material-symbols-outlined mr-1 text-sm",
-                                    children: "check"
-                                }, void 0, false, {
-                                    fileName: "[project]/app/phone/PhoneContent.tsx",
-                                    lineNumber: 153,
-                                    columnNumber: 15
-                                }, this),
-                                "已复制"
-                            ]
-                        }, void 0, true) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Fragment"], {
-                            children: [
-                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                    className: "material-symbols-outlined mr-1 text-sm",
-                                    children: "content_copy"
-                                }, void 0, false, {
-                                    fileName: "[project]/app/phone/PhoneContent.tsx",
-                                    lineNumber: 158,
-                                    columnNumber: 15
-                                }, this),
-                                "复制链接"
-                            ]
-                        }, void 0, true)
-                    }, void 0, false, {
-                        fileName: "[project]/app/phone/PhoneContent.tsx",
-                        lineNumber: 143,
-                        columnNumber: 9
-                    }, this)
-                ]
-            }, void 0, true, {
+                    }, void 0, true) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Fragment"], {
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                className: "material-symbols-outlined mr-1 text-sm",
+                                children: "content_copy"
+                            }, void 0, false, {
+                                fileName: "[project]/app/phone/PhoneContent.tsx",
+                                lineNumber: 208,
+                                columnNumber: 15
+                            }, this),
+                            "复制链接"
+                        ]
+                    }, void 0, true)
+                }, void 0, false, {
+                    fileName: "[project]/app/phone/PhoneContent.tsx",
+                    lineNumber: 193,
+                    columnNumber: 9
+                }, this)
+            }, void 0, false, {
                 fileName: "[project]/app/phone/PhoneContent.tsx",
-                lineNumber: 114,
+                lineNumber: 192,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/app/phone/PhoneContent.tsx",
-        lineNumber: 93,
+        lineNumber: 158,
         columnNumber: 5
     }, this);
 }
-_s(NavigationBar, "2/Xp5dvGgc3DE1LEd1QNvpbEkfY=", false, function() {
+_s(NavigationBar, "IW9i5aTnGGKVtgldn9AJgPqlxGs=", false, function() {
     return [
         __TURBOPACK__imported__module__$5b$project$5d2f$hooks$2f$useCopyToClipboard$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCopyToClipboard"]
     ];
@@ -1092,14 +1132,14 @@ function PhoneContent() {
                 message: "正在获取音乐信息..."
             }, void 0, false, {
                 fileName: "[project]/app/phone/PhoneContent.tsx",
-                lineNumber: 398,
+                lineNumber: 448,
                 columnNumber: 21
             }, this),
             isSaving && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(LoadingOverlay, {
                 message: "正在生成海报..."
             }, void 0, false, {
                 fileName: "[project]/app/phone/PhoneContent.tsx",
-                lineNumber: 399,
+                lineNumber: 449,
                 columnNumber: 20
             }, this),
             error ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1109,21 +1149,22 @@ function PhoneContent() {
                     children: error
                 }, void 0, false, {
                     fileName: "[project]/app/phone/PhoneContent.tsx",
-                    lineNumber: 403,
+                    lineNumber: 453,
                     columnNumber: 11
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/app/phone/PhoneContent.tsx",
-                lineNumber: 402,
+                lineNumber: 452,
                 columnNumber: 9
             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                 className: "max-w-6xl mx-auto",
                 children: [
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(NavigationBar, {
-                        currentUrl: searchParams.get("url")
+                        currentUrl: searchParams.get("url"),
+                        musicInfo: musicInfo
                     }, void 0, false, {
                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                        lineNumber: 408,
+                        lineNumber: 458,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1133,12 +1174,12 @@ function PhoneContent() {
                             children: "Card.Catpng.net"
                         }, void 0, false, {
                             fileName: "[project]/app/phone/PhoneContent.tsx",
-                            lineNumber: 411,
+                            lineNumber: 461,
                             columnNumber: 13
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                        lineNumber: 410,
+                        lineNumber: 460,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1155,17 +1196,17 @@ function PhoneContent() {
                                         className: "w-full h-auto"
                                     }, void 0, false, {
                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                        lineNumber: 420,
+                                        lineNumber: 470,
                                         columnNumber: 17
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/app/phone/PhoneContent.tsx",
-                                    lineNumber: 419,
+                                    lineNumber: 469,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/app/phone/PhoneContent.tsx",
-                                lineNumber: 418,
+                                lineNumber: 468,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1179,7 +1220,7 @@ function PhoneContent() {
                                                 children: "基本信息"
                                             }, void 0, false, {
                                                 fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                lineNumber: 433,
+                                                lineNumber: 483,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1189,7 +1230,7 @@ function PhoneContent() {
                                                         children: "歌曲标题"
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 437,
+                                                        lineNumber: 487,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -1199,13 +1240,13 @@ function PhoneContent() {
                                                         className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 440,
+                                                        lineNumber: 490,
                                                         columnNumber: 19
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                lineNumber: 436,
+                                                lineNumber: 486,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1215,7 +1256,7 @@ function PhoneContent() {
                                                         children: "艺术家"
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 450,
+                                                        lineNumber: 500,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -1225,13 +1266,13 @@ function PhoneContent() {
                                                         className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 453,
+                                                        lineNumber: 503,
                                                         columnNumber: 19
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                lineNumber: 449,
+                                                lineNumber: 499,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1241,7 +1282,7 @@ function PhoneContent() {
                                                         children: "歌词"
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 463,
+                                                        lineNumber: 513,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("textarea", {
@@ -1251,13 +1292,13 @@ function PhoneContent() {
                                                         className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 466,
+                                                        lineNumber: 516,
                                                         columnNumber: 19
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                lineNumber: 462,
+                                                lineNumber: 512,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1267,7 +1308,7 @@ function PhoneContent() {
                                                         children: "实际时长 (mm:ss)"
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 476,
+                                                        lineNumber: 526,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -1279,13 +1320,13 @@ function PhoneContent() {
                                                         className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 479,
+                                                        lineNumber: 529,
                                                         columnNumber: 19
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                lineNumber: 475,
+                                                lineNumber: 525,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1295,7 +1336,7 @@ function PhoneContent() {
                                                         children: "播放时长 (mm:ss)"
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 491,
+                                                        lineNumber: 541,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -1312,13 +1353,13 @@ function PhoneContent() {
                                                         className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 494,
+                                                        lineNumber: 544,
                                                         columnNumber: 19
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                lineNumber: 490,
+                                                lineNumber: 540,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1328,7 +1369,7 @@ function PhoneContent() {
                                                         children: "封面图片"
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 516,
+                                                        lineNumber: 566,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -1338,19 +1379,19 @@ function PhoneContent() {
                                                         className: "mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 519,
+                                                        lineNumber: 569,
                                                         columnNumber: 19
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                lineNumber: 515,
+                                                lineNumber: 565,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                        lineNumber: 432,
+                                        lineNumber: 482,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1361,7 +1402,7 @@ function PhoneContent() {
                                                 children: "背景设置"
                                             }, void 0, false, {
                                                 fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                lineNumber: 530,
+                                                lineNumber: 580,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1371,7 +1412,7 @@ function PhoneContent() {
                                                         children: "背景图片"
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 534,
+                                                        lineNumber: 584,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -1381,13 +1422,13 @@ function PhoneContent() {
                                                         className: "mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 537,
+                                                        lineNumber: 587,
                                                         columnNumber: 19
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                lineNumber: 533,
+                                                lineNumber: 583,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1397,7 +1438,7 @@ function PhoneContent() {
                                                         children: "模糊程度"
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 547,
+                                                        lineNumber: 597,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -1410,7 +1451,7 @@ function PhoneContent() {
                                                         className: "mt-1 block w-full"
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 550,
+                                                        lineNumber: 600,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1421,13 +1462,13 @@ function PhoneContent() {
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 564,
+                                                        lineNumber: 614,
                                                         columnNumber: 19
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                lineNumber: 546,
+                                                lineNumber: 596,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1437,7 +1478,7 @@ function PhoneContent() {
                                                         children: "不透明度"
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 571,
+                                                        lineNumber: 621,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -1450,7 +1491,7 @@ function PhoneContent() {
                                                         className: "mt-1 block w-full"
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 574,
+                                                        lineNumber: 624,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1461,13 +1502,13 @@ function PhoneContent() {
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 588,
+                                                        lineNumber: 638,
                                                         columnNumber: 19
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                lineNumber: 570,
+                                                lineNumber: 620,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1478,7 +1519,7 @@ function PhoneContent() {
                                                         children: "渐变背景"
                                                     }, void 0, false, {
                                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 595,
+                                                        lineNumber: 645,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
@@ -1491,32 +1532,32 @@ function PhoneContent() {
                                                                 className: "sr-only peer"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                                lineNumber: 599,
+                                                                lineNumber: 649,
                                                                 columnNumber: 21
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                                 className: "w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                                lineNumber: 605,
+                                                                lineNumber: 655,
                                                                 columnNumber: 21
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                        lineNumber: 598,
+                                                        lineNumber: 648,
                                                         columnNumber: 19
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/app/phone/PhoneContent.tsx",
-                                                lineNumber: 594,
+                                                lineNumber: 644,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                        lineNumber: 529,
+                                        lineNumber: 579,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -1526,25 +1567,25 @@ function PhoneContent() {
                                         children: isSaving ? "保存中..." : "保存海报"
                                     }, void 0, false, {
                                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                                        lineNumber: 611,
+                                        lineNumber: 661,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/app/phone/PhoneContent.tsx",
-                                lineNumber: 430,
+                                lineNumber: 480,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                        lineNumber: 416,
+                        lineNumber: 466,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/app/phone/PhoneContent.tsx",
-                lineNumber: 406,
+                lineNumber: 456,
                 columnNumber: 9
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1557,20 +1598,20 @@ function PhoneContent() {
                         children: "aidaoxx@gmail.com"
                     }, void 0, false, {
                         fileName: "[project]/app/phone/PhoneContent.tsx",
-                        lineNumber: 624,
+                        lineNumber: 674,
                         columnNumber: 9
                     }, this),
                     "，谢谢"
                 ]
             }, void 0, true, {
                 fileName: "[project]/app/phone/PhoneContent.tsx",
-                lineNumber: 622,
+                lineNumber: 672,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/app/phone/PhoneContent.tsx",
-        lineNumber: 396,
+        lineNumber: 446,
         columnNumber: 5
     }, this);
 }

@@ -69,8 +69,27 @@ function LoadingOverlay({ message }: { message: string }) {
 }
 
 // 导航栏组件
-function NavigationBar({ currentUrl }: { currentUrl: string | null }) {
+function NavigationBar({ currentUrl, musicInfo }: { currentUrl: string | null, musicInfo: MusicInfo }) {
   const { isCopied, copyToClipboard } = useCopyToClipboard();
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [favoriteId, setFavoriteId] = useState<number | null>(null);
+  const [isUpdatingFavorite, setIsUpdatingFavorite] = useState(false);
+
+  useEffect(()=>{
+    const checkFavoriteStatus = async () => {
+      if (!currentUrl) return;
+      try {
+        const response = await fetch(`/api/favorites/check?url=${encodeURIComponent(currentUrl)}`);
+        const data = await response.json();
+        setIsFavorited(data.isFavorited);
+        setFavoriteId(data.favoriteId);
+      } catch (error) {
+        console.error("检查收藏状态失败:", error);
+      }
+    };
+
+    checkFavoriteStatus();
+  }, [currentUrl]);
 
   const handleCopyUrl = async () => {
     const success = await copyToClipboard(window.location.href);
@@ -79,6 +98,61 @@ function NavigationBar({ currentUrl }: { currentUrl: string | null }) {
       console.error('复制失败，请手动复制链接');
     }
   };
+
+  const handleFavoriteClick = async () => {
+    if (isUpdatingFavorite) return;
+    setIsUpdatingFavorite(true);
+
+    try {
+      if (isFavorited) {
+        // 取消收藏
+        if (favoriteId) {
+          const response = await fetch(`/api/favorites?id=${favoriteId}`, {
+            method: "DELETE",
+          });
+          if (response.ok) {
+            setIsFavorited(false);
+            setFavoriteId(null);
+          } else {
+            const error = await response.json();
+            alert(error.error || "取消收藏失败");
+          }
+        }
+      } else {
+        // 添加收藏
+        if (!currentUrl || !musicInfo.title || !musicInfo.artist) {
+          alert("歌曲信息不完整，无法收藏");
+          return;
+        }
+        const response = await fetch("/api/favorites", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            url: currentUrl,
+            title: musicInfo.title,
+            artist: musicInfo.artist,
+            coverUrl: musicInfo.coverUrl,
+            duration: musicInfo.duration,
+          }),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setIsFavorited(true);
+          setFavoriteId(data.favorite.id);
+        } else {
+          const error = await response.json();
+          alert(error.error || "添加收藏失败");
+        }
+      }
+    } catch (error) {
+      console.error("收藏操作失败:", error);
+      alert("操作失败，请重试");
+    } finally {
+      setIsUpdatingFavorite(false);
+    }
+  }
 
   return (
     <div className="flex items-center justify-between mb-8">
@@ -101,6 +175,19 @@ function NavigationBar({ currentUrl }: { currentUrl: string | null }) {
         >
           Poster
         </Link>
+        <button
+        className={`px-4 py-2 rounded-md shadow hover:shadow-md transition-all duration-200 flex items-center ${
+          isFavorited
+            ? 'bg-yellow-500 text-white'
+            : 'bg-white text-gray-600 hover:text-gray-900'
+        }`}
+        onClick={handleFavoriteClick}
+        >
+          <span>
+            star
+          </span>
+          收藏
+        </button>
       </div>
       <div className="flex items-center space-x-4">
         <button 
@@ -368,7 +455,7 @@ export default function PhoneContent() {
       ) : (
         <div className="max-w-6xl mx-auto">
           {/* 添加导航栏 */}
-          <NavigationBar currentUrl={searchParams.get("url")} />
+          <NavigationBar currentUrl={searchParams.get("url")} musicInfo={musicInfo} />
 
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-center text-gray-900">
