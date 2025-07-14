@@ -183,14 +183,19 @@ function NavigationBar({ currentUrl, musicInfo }: { currentUrl: string | null, m
         }`}
         onClick={handleFavoriteClick}
         >
-          <span>
+          <span 
+            className={`material-symbols-outlined mr-1 text-sm ${
+              isFavorited ? 'font-bold' : ''
+            }`}
+            style={{ 
+              fontVariationSettings: isFavorited ? '"FILL" 1' : '"FILL" 0'
+            }}
+          >
             star
           </span>
           收藏
         </button>
-      </div>
-      <div className="flex items-center space-x-4">
-        <button 
+        <button
           className={`px-4 py-2 rounded-md shadow hover:shadow-md transition-all duration-200 flex items-center ${
             isCopied 
               ? 'bg-green-500 text-white' 
