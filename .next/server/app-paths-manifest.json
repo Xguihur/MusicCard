@@ -1,10 +1,9 @@
 {
   "/page": "app/page.js",
   "/_not-found/page": "app/_not-found/page.js",
+  "/api/favorites/route": "app/api/favorites/route.js",
   "/poster/page": "app/poster/page.js",
   "/api/favorites/check/route": "app/api/favorites/check/route.js",
   "/api/music/route": "app/api/music/route.js",
-  "/api/proxy/image/route": "app/api/proxy/image/route.js",
-  "/api/favorites/route": "app/api/favorites/route.js",
-  "/phone/page": "app/phone/page.js"
+  "/api/proxy/image/route": "app/api/proxy/image/route.js"
 }
